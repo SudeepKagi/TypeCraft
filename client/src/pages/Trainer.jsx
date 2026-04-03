@@ -1,18 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageWrapper } from '../components/layout/PageWrapper';
 import { WordDisplay } from '../components/typing/WordDisplay';
 import { useTyping } from '../hooks/useTyping';
+import useAuthStore from '../store/authStore';
 
 const Trainer = () => {
   const [weakness, setWeakness] = useState('');
   const [passage, setPassage] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const userId = useAuthStore(state => state.userId);
 
   const { 
     words, currentWordIndex, currentCharIndex, status, currentWPM, 
     accuracy, reset 
   } = useTyping(passage || "Awaiting training passage...");
+  
+  const addXP = useAuthStore(state => state.addXP);
+
+  // Handle saving results
+  useEffect(() => {
+    if (status === 'finished' && userId && passage) {
+      fetch('http://localhost:4000/api/results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          wpm: currentWPM,
+          accuracy,
+          mode: 'trainer'
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.xpGained) {
+          addXP(data.xpGained);
+        }
+      })
+      .catch(err => console.error('Failed to save trainer result:', err));
+    }
+  }, [status, userId, passage, currentWPM, accuracy, addXP]);
 
   const handleGenerate = async () => {
     if (!weakness.trim()) return;

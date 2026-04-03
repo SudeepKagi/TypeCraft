@@ -1,5 +1,44 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { calculateWPM, calculateConsistency, calculateAccuracy } from '../lib/wpmCalc';
+import useSettingsStore from '../store/settingsStore';
+
+// Simple Web Audio Sound Generator
+const playClickSound = (type, volume) => {
+  const AudioContext = window.AudioContext || window.webkitAudioContext;
+  if (!AudioContext) return;
+  
+  const ctx = new AudioContext();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  
+  const now = ctx.currentTime;
+  
+  if (type === 'mechanical') {
+    osc.type = 'square';
+    osc.frequency.setValueAtTime(150, now);
+    osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
+    gain.gain.setValueAtTime(volume * 0.5, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+  } else if (type === 'retro') {
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
+    gain.gain.setValueAtTime(volume * 0.3, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+  } else {
+    // Minimal
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, now);
+    gain.gain.setValueAtTime(volume * 0.2, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.03);
+  }
+  
+  osc.start(now);
+  osc.stop(now + 0.1);
+};
 
 const generateWords = (passage) => {
   return passage.split(' ').map(word => ({
@@ -17,6 +56,7 @@ export const useTyping = (initialPassage) => {
   const [startTime, setStartTime] = useState(null);
   const [keystrokes, setKeystrokes] = useState([]);
   const [errors, setErrors] = useState(0);
+  const [currentWPM, setCurrentWPM] = useState(0);
   const [wpmHistory, setWpmHistory] = useState([]);
   
   const wpmIntervalRef = useRef(null);
@@ -30,21 +70,31 @@ export const useTyping = (initialPassage) => {
     setKeystrokes([]);
     setErrors(0);
     setWpmHistory([]);
+    setCurrentWPM(0);
     if (wpmIntervalRef.current) cancelAnimationFrame(wpmIntervalRef.current);
   }, [initialPassage]);
 
   // Derived values
   const correctChars = words.reduce((acc, word) => {
-    return acc + word.letters.filter(l => l.state === 'correct').length;
-  }, 0) + words.slice(0, currentWordIndex).filter(w => w.state === 'typed').length; // spaces count as correct if word typed
+    return acc + (word.letters ? word.letters.filter(l => l.state === 'correct').length : 0);
+  }, 0) + (currentWordIndex > 0 ? words.slice(0, currentWordIndex).filter(w => w.state === 'typed').length : 0);
 
-  const currentWPM = startTime && status === 'running'
-    ? calculateWPM(correctChars, (Date.now() - startTime) / 60000)
-    : 0;
+  // Update WPM in a side effect or calculation
+  useEffect(() => {
+    if (status === 'running' && startTime) {
+      const elapsedMinutes = (Date.now() - startTime) / 60000;
+      if (elapsedMinutes > 0) {
+        setCurrentWPM(calculateWPM(correctChars, elapsedMinutes));
+      }
+    }
+  }, [status, startTime, correctChars]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     if (status === 'finished') return;
+
+    const { soundEnabled, soundType, volume } = useSettingsStore.getState();
+    if (soundEnabled) playClickSound(soundType, volume);
 
     const key = e.key;
     if (key.length === 1 || key === 'Backspace' || key === ' ') {
@@ -114,10 +164,15 @@ export const useTyping = (initialPassage) => {
           }
         }
         
+        if (newWords[currentWordIndex].state === 'typed' && currentWordIndex === words.length - 1) {
+          setStatus('finished');
+          if (wpmIntervalRef.current) cancelAnimationFrame(wpmIntervalRef.current);
+        }
+        
         return newWords;
       });
     }
-  }, [status, currentWordIndex, currentCharIndex, startTime]);
+  }, [status, currentWordIndex, currentCharIndex, startTime, words.length]);
 
   // WPM Sampling via RAF
   useEffect(() => {

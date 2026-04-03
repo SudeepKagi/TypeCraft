@@ -31,28 +31,121 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date() });
 });
 
-// Create a user or get existing
+// Register or get user
 app.post('/api/users', async (req, res) => {
   const { username, email, avatarUrl } = req.body;
-  
-  if (!username || !email) {
-    return res.status(400).json({ error: 'Username and email required' });
+  try {
+    const user = await prisma.user.upsert({
+      where: { email },
+      update: { username, avatarUrl },
+      create: { username, email, avatarUrl }
+    });
+    res.json(user);
+  } catch (error) {
+    console.error('[User sync error]', error);
+    res.status(500).json({ error: 'Failed to sync user' });
   }
+});
+
+// Save result and update XP
+app.post('/api/results', async (req, res) => {
+  const { userId, wpm, accuracy, duration, mode } = req.body;
 
   try {
-    let user = await prisma.user.findUnique({
-      where: { username }
+    const result = await prisma.raceResult.create({
+      data: {
+        wpm: parseFloat(wpm),
+        accuracy: parseFloat(accuracy),
+        userId
+      }
     });
 
-    if (!user) {
-      user = await prisma.user.create({
-        data: { username, email, avatarUrl }
+    if (mode === 'solo' || mode === 'trainer') {
+      await prisma.typingSession.create({
+        data: {
+          wpm: parseFloat(wpm),
+          accuracy: parseFloat(accuracy),
+          duration: parseInt(duration) || 60,
+          mode: mode || 'time',
+          userId
+        }
       });
     }
 
-    res.json(user);
+    // Calculate XP: (WPM * Accuracy / 100) * (Duration / 60)
+    // Ensures scaling by time commitment
+    const rawXp = parseFloat(wpm) * (parseFloat(accuracy) / 100) * (duration / 60);
+    const xpGained = Math.max(1, Math.floor(rawXp));
+    
+    const updatedUser = await prisma.user.update({
+      where: { id: userId },
+      data: {
+        xp: { increment: xpGained }
+      }
+    });
+
+    res.json({ result, xpGained, totalXp: updatedUser.xp });
   } catch (error) {
-    res.status(500).json({ error: 'Failed to process user' });
+    console.error('[Results Error]', error);
+    res.status(500).json({ error: 'Failed to save result' });
+  }
+});
+
+// Get user stats for dashboard
+app.get('/api/users/:userId/stats', async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const results = await prisma.raceResult.findMany({
+      where: { userId },
+      orderBy: { date: 'desc' },
+      take: 50
+    });
+
+    if (results.length === 0) {
+      return res.json({
+        bestWpm: 0,
+        avgWpm: 0,
+        totalTests: 0,
+        momentum: [],
+        recentAccuracy: 0
+      });
+    }
+
+    const bestWpm = Math.max(...results.map(r => r.wpm));
+    
+    // Avg WPM last 30 days
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const recentResults = results.filter(r => new Date(r.date) >= thirtyDaysAgo);
+    const avgWpm = recentResults.length > 0 
+      ? recentResults.reduce((acc, r) => acc + r.wpm, 0) / recentResults.length 
+      : 0;
+
+    const totalTests = await prisma.raceResult.count({ where: { userId } });
+    
+    // Momentum (last 10 tests for Sparkline)
+    const momentum = results.slice(0, 10).reverse().map(r => r.wpm);
+    const recentAccuracy = results[0]?.accuracy || 0;
+    
+    const recentRaces = results.slice(0, 5).map(r => ({
+      id: r.id,
+      wpm: r.wpm,
+      accuracy: r.accuracy,
+      date: r.date
+    }));
+
+    res.json({
+      bestWpm,
+      avgWpm: parseFloat(avgWpm.toFixed(1)),
+      totalTests,
+      momentum,
+      recentAccuracy,
+      recentRaces
+    });
+  } catch (error) {
+    console.error('[Stats Error]', error);
+    res.status(500).json({ error: 'Failed to fetch stats' });
   }
 });
 

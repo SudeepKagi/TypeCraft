@@ -14,7 +14,7 @@ const Race = () => {
   
   const { 
     words, currentWordIndex, currentCharIndex, currentWPM, 
-    reset, status: typingStatus 
+    reset, status: typingStatus, accuracy 
   } = useTyping(samplePassage);
 
   const [joinCode, setJoinCode] = useState('');
@@ -60,9 +60,9 @@ const Race = () => {
   useEffect(() => {
     if (status === 'racing' && roomCode) {
       const completionPercent = ((currentWordIndex / words.length) * 100).toFixed(1);
-      socket.emit('race:progress', { roomCode, progress: completionPercent, wpm: currentWPM });
+      socket.emit('race:progress', { roomCode, progress: completionPercent, wpm: currentWPM, accuracy });
     }
-  }, [currentWordIndex, currentWPM, status, roomCode, words.length]);
+  }, [currentWordIndex, currentWPM, status, roomCode, words.length, accuracy]);
 
 
   const handleCreateRace = () => {
@@ -123,7 +123,7 @@ const Race = () => {
               </div>
               <div class="text-center">
                 <span class="block text-[10px] text-neutral-500 font-inter uppercase">ACC</span>
-                <span class="text-xl font-syne text-neutral-100">98%</span>
+                <span class="text-xl font-syne text-neutral-100">{accuracy.toFixed(0)}%</span>
               </div>
             </div>
           </div>

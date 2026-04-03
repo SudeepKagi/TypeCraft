@@ -18,14 +18,26 @@ export const Navbar = () => {
           <Link to="/leaderboard" className="text-neutral-500 hover:text-neutral-50 transition-colors duration-200">Leaderboard</Link>
         </div>
       </div>
-      <div className="flex items-center gap-6">
-        <div className="flex items-center gap-2 font-mono text-primary bg-primary/10 px-3 py-1 rounded-full border border-primary/20">
-          <span className="material-symbols-outlined text-sm">local_fire_department</span>
-          <span className="text-xs font-bold">XP {user?.xp || 0}</span>
+      <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 bg-neutral-900 border border-white/5 px-4 py-1.5 rounded-lg shadow-inner">
+          <div className="flex flex-col items-end">
+            <span className="text-[8px] font-mono text-neutral-500 uppercase tracking-tighter">Pilot Level</span>
+            <span className="text-xs font-syne font-black text-primary">LVL_{user?.level || 1}</span>
+          </div>
+          <div className="w-[1px] h-6 bg-white/10"></div>
+          <div className="flex flex-col">
+            <span className="text-[8px] font-mono text-neutral-500 uppercase tracking-tighter">XP Progress</span>
+            <span className="text-xs font-mono text-neutral-200">{user?.xp || 0}</span>
+          </div>
         </div>
-        <div className="w-8 h-8 rounded-full overflow-hidden border border-outline-variant/30">
-          <img src={user?.avatarUrl} alt="User avatar" />
-        </div>
+        
+        <Link to="/settings" className="p-2 rounded-lg bg-neutral-900 border border-white/5 text-neutral-500 hover:text-primary transition-all group">
+          <span className="material-symbols-outlined text-lg group-hover:rotate-90 transition-transform duration-500">settings</span>
+        </Link>
+
+        <Link to="/dashboard" className="w-10 h-10 rounded-lg overflow-hidden border border-primary/20 hover:border-primary transition-all p-0.5 bg-neutral-900">
+          <img src={user?.avatarUrl} alt="User avatar" className="w-full h-full object-cover rounded-[6px]" />
+        </Link>
       </div>
     </nav>
   );

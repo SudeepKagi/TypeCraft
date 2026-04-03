@@ -5,6 +5,12 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --primary: #1D9E75;
+  --primary-glow: rgba(29, 158, 117, 0.4);
+  --primary-transparent: rgba(29, 158, 117, 0.1);
+}
+
 @layer base {
   body {
     background-color: #0A0A0A;
@@ -24,14 +30,14 @@
   }
   
   .glass-card:hover {
-    box-shadow: 0 0 40px rgba(29, 158, 117, 0.15);
-    border-color: rgba(29, 158, 117, 0.3);
+    box-shadow: 0 0 40px var(--primary-transparent);
+    border-color: var(--primary);
   }
   
   .glass-row:hover {
     background: rgba(255, 255, 255, 0.03);
     backdrop-filter: blur(10px);
-    box-shadow: inset 0 0 0 1px rgba(104, 219, 174, 0.2);
+    box-shadow: inset 0 0 0 1px var(--primary-transparent);
   }
 
   /* Dot Overlay */
@@ -41,7 +47,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: radial-gradient(rgba(29, 158, 117, 0.15) 1px, transparent 0.5px);
+    background-image: radial-gradient(var(--primary-glow) 1px, transparent 0.5px);
     background-size: 32px 32px;
     pointer-events: none;
     z-index: 1;
@@ -50,19 +56,19 @@
 
 @layer utilities {
   .text-glow {
-    text-shadow: 0 0 12px rgba(29, 158, 117, 0.4);
+    text-shadow: 0 0 12px var(--primary-glow);
   }
 
   .caret-glow {
-    box-shadow: 0 0 12px rgba(29, 158, 117, 0.6);
+    box-shadow: 0 0 12px var(--primary);
   }
 
   .glow-teal {
-    box-shadow: 0 0 40px rgba(29, 158, 117, 0.12);
+    box-shadow: 0 0 40px var(--primary-transparent);
   }
 
   .shadow-teal-glow {
-    box-shadow: 0 0 32px rgba(29, 158, 117, 0.08);
+    box-shadow: 0 0 32px var(--primary-transparent);
   }
 
   .caret-blink {
@@ -70,7 +76,7 @@
   }
 
   .race-track-gradient {
-    background: linear-gradient(90deg, rgba(29, 158, 117, 0.1) 0%, rgba(29, 158, 117, 0) 100%);
+    background: linear-gradient(90deg, var(--primary-transparent) 0%, rgba(29, 158, 117, 0) 100%);
   }
 
   .no-scrollbar::-webkit-scrollbar { 
@@ -92,10 +98,10 @@
   display: inline-block;
   width: 2px;
   height: 1.2em;
-  background-color: #68dbae;
+  background-color: var(--primary);
   vertical-align: middle;
   margin-left: 2px;
-  box-shadow: 0 0 8px #1D9E75;
+  box-shadow: 0 0 8px var(--primary);
   animation: blink 1s step-end infinite;
 }
 
@@ -106,7 +112,9 @@
 }
 
 .text-gradient {
-  background: linear-gradient(135deg, #68dbae 0%, #1D9E75 100%);
+  background: linear-gradient(135deg, var(--primary) 0%, var(--primary) 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
+

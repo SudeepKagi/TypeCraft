@@ -1,13 +1,52 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { PageWrapper } from '../components/layout/PageWrapper';
+import useAuthStore from '../store/authStore';
 
 const Dashboard = () => {
+  const userId = useAuthStore(state => state.userId);
+  const user = useAuthStore(state => state.user);
+  const [stats, setStats] = useState({
+    bestWpm: 0,
+    avgWpm: 0,
+    totalTests: 0,
+    momentum: [],
+    recentAccuracy: 0,
+    recentRaces: []
+  });
+
+  useEffect(() => {
+    if (userId) {
+      fetch(`http://localhost:4000/api/users/${userId}/stats`)
+        .then(res => res.json())
+        .then(data => setStats(data))
+        .catch(err => console.error('Failed to fetch stats:', err));
+    }
+  }, [userId]);
+
+  // Generate sparkline path
+  const generatePath = (data) => {
+    if (!data.length) return "";
+    const width = 100;
+    const height = 100;
+    const padding = 10;
+    const maxVal = Math.max(...data, 100);
+    const points = data.map((val, i) => {
+      const x = (i / (data.length - 1)) * width;
+      const y = height - (val / maxVal) * height;
+      return `${x},${y}`;
+    });
+    return `M ${points.join(' L ')}`;
+  };
+
+  const sparklinePath = generatePath(stats.momentum);
+
   return (
     <PageWrapper>
       <main className="pt-24 pb-12 px-8 max-w-7xl mx-auto space-y-8 min-h-screen">
         <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-5xl font-syne font-extrabold tracking-tighter text-on-surface">PERFORMANCE HUB</h1>
+            <h1 className="text-5xl font-syne font-extrabold tracking-tighter text-on-surface uppercase">{user?.username || 'PILOT'}_DASHBOARD</h1>
             <p className="text-on-surface-variant font-mono mt-2 uppercase tracking-widest text-xs">Elite Training Environment // Alpha-09</p>
           </div>
           <div className="flex gap-2">
@@ -21,29 +60,29 @@ const Dashboard = () => {
           <div className="bg-[#111111] p-6 border-t border-primary/20 flex flex-col justify-between group hover:bg-[#161616] transition-colors rounded-b-xl border-x border-b border-transparent hover:border-white/5 cursor-default">
             <span className="text-[10px] font-mono text-on-surface-variant tracking-widest uppercase">Best WPM</span>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-5xl font-syne text-primary">142</span>
+              <span className="text-5xl font-syne text-primary">{Math.floor(stats.bestWpm)}</span>
               <span className="text-xs font-mono text-on-surface-variant">WORDS/MIN</span>
             </div>
           </div>
           <div className="bg-[#111111] p-6 border-t border-outline-variant/20 flex flex-col justify-between group hover:bg-[#161616] transition-colors rounded-b-xl border-x border-b border-transparent hover:border-white/5 cursor-default">
             <span className="text-[10px] font-mono text-on-surface-variant tracking-widest uppercase">Avg WPM (30d)</span>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-5xl font-syne text-on-surface">118</span>
-              <span className="text-xs font-mono text-primary">+4.2%</span>
+              <span className="text-5xl font-syne text-on-surface">{stats.avgWpm}</span>
+              <span className="text-xs font-mono text-primary">+0.0%</span>
             </div>
           </div>
           <div className="bg-[#111111] p-6 border-t border-outline-variant/20 flex flex-col justify-between group hover:bg-[#161616] transition-colors rounded-b-xl border-x border-b border-transparent hover:border-white/5 cursor-default">
             <span className="text-[10px] font-mono text-on-surface-variant tracking-widest uppercase">Tests Taken</span>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-5xl font-syne text-on-surface">842</span>
+              <span className="text-5xl font-syne text-on-surface">{stats.totalTests}</span>
               <span className="text-xs font-mono text-on-surface-variant">TOTAL</span>
             </div>
           </div>
           <div className="bg-[#111111] p-6 border-t border-primary/20 flex flex-col justify-between group hover:bg-[#161616] transition-colors rounded-b-xl border-x border-b border-transparent hover:border-white/5 cursor-default">
-            <span className="text-[10px] font-mono text-on-surface-variant tracking-widest uppercase">Current Streak</span>
+            <span className="text-[10px] font-mono text-on-surface-variant tracking-widest uppercase">Accuracy</span>
             <div className="mt-4 flex items-baseline gap-2">
-              <span className="text-5xl font-syne text-primary">14</span>
-              <span className="text-xs font-mono text-on-surface-variant">DAYS_ACTIVE</span>
+              <span className="text-5xl font-syne text-primary">{stats.recentAccuracy.toFixed(1)}</span>
+              <span className="text-xs font-mono text-on-surface-variant">%</span>
             </div>
           </div>
         </div>
@@ -56,10 +95,8 @@ const Dashboard = () => {
             <div className="flex items-center justify-between">
               <h3 className="font-syne text-xl">WPM_MOMENTUM</h3>
               <div className="flex gap-1 p-1 bg-surface-container-lowest rounded-lg border border-outline-variant/10">
-                <button className="px-3 py-1 text-[10px] font-mono text-on-surface-variant hover:text-on-surface">7D</button>
-                <button className="px-3 py-1 text-[10px] font-mono bg-primary text-on-primary-container rounded-sm">30D</button>
-                <button className="px-3 py-1 text-[10px] font-mono text-on-surface-variant hover:text-on-surface">90D</button>
-                <button className="px-3 py-1 text-[10px] font-mono text-on-surface-variant hover:text-on-surface">ALL</button>
+                <button className="px-3 py-1 text-[10px] font-mono text-on-surface-variant hover:text-on-surface">SESSION</button>
+                <button className="px-3 py-1 text-[10px] font-mono bg-primary text-on-primary-container rounded-sm">RECENT</button>
               </div>
             </div>
             <div className="relative h-64 w-full">
@@ -70,14 +107,16 @@ const Dashboard = () => {
                     <stop offset="100%" stopColor="#1D9E75" stopOpacity="0"></stop>
                   </linearGradient>
                 </defs>
-                <path d="M0,80 Q10,75 20,60 T40,65 T60,40 T80,30 T100,20 L100,100 L0,100 Z" fill="url(#chartGradient)"></path>
-                <path d="M0,80 Q10,75 20,60 T40,65 T60,40 T80,30 T100,20" fill="none" stroke="#1D9E75" strokeWidth="0.5"></path>
-                <circle className="hover:r-2 transition-all cursor-pointer" cx="20" cy="60" fill="#1D9E75" r="1"></circle>
-                <circle className="hover:r-2 transition-all cursor-pointer" cx="40" cy="65" fill="#1D9E75" r="1"></circle>
-                <circle className="hover:r-2 transition-all cursor-pointer" cx="60" cy="40" fill="#1D9E75" r="1"></circle>
-                <circle className="hover:r-2 transition-all cursor-pointer" cx="80" cy="30" fill="#1D9E75" r="1"></circle>
+                {stats.momentum.length > 0 ? (
+                  <>
+                    <path d={`${sparklinePath} L 100,100 L 0,100 Z`} fill="url(#chartGradient)"></path>
+                    <path d={sparklinePath} fill="none" stroke="#1D9E75" strokeWidth="1"></path>
+                  </>
+                ) : (
+                  <text x="50" y="50" fill="#444" textAnchor="middle" className="text-[5px] font-mono">No data available yet. Complete a test to see your momentum.</text>
+                )}
               </svg>
-              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none">
+              <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
                 <div className="border-t border-outline-variant/10 w-full"></div>
                 <div className="border-t border-outline-variant/10 w-full"></div>
                 <div className="border-t border-outline-variant/10 w-full"></div>
@@ -86,57 +125,58 @@ const Dashboard = () => {
             </div>
           </div>
 
-          {/* Streak Calendar */}
-          <div className="bg-[#111111] p-8 flex flex-col gap-6 rounded-xl border border-white/5">
-            <div className="flex items-center justify-between">
-              <h3 className="font-syne text-xl uppercase">Consistency</h3>
-              <span className="text-[10px] font-mono text-primary">LVL 42</span>
-            </div>
-            
-            <div className="grid grid-cols-7 gap-1.5 overflow-hidden font-mono text-[8px] text-center text-outline-variant mt-2">
-                <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
-                
-                <div className="aspect-square rounded-sm bg-primary"></div>
-                <div className="aspect-square rounded-sm bg-primary/80"></div>
-                <div className="aspect-square rounded-sm bg-neutral-900"></div>
-                <div className="aspect-square rounded-sm bg-primary/40"></div>
-                <div className="aspect-square rounded-sm bg-primary/90"></div>
-                <div className="aspect-square rounded-sm bg-primary"></div>
-                <div className="aspect-square rounded-sm bg-primary/20"></div>
-
-                <div className="aspect-square rounded-sm bg-neutral-900"></div>
-                <div className="aspect-square rounded-sm bg-primary/40"></div>
-                <div className="aspect-square rounded-sm bg-primary/60"></div>
-                <div className="aspect-square rounded-sm bg-primary"></div>
-                <div className="aspect-square rounded-sm bg-primary/10"></div>
-                <div className="aspect-square rounded-sm bg-neutral-900"></div>
-                <div className="aspect-square rounded-sm bg-neutral-900"></div>
-
-                <div className="aspect-square rounded-sm bg-primary"></div>
-                <div className="aspect-square rounded-sm bg-primary/80"></div>
-                <div className="aspect-square rounded-sm bg-primary"></div>
-                <div className="aspect-square rounded-sm bg-primary/40"></div>
-                <div className="aspect-square rounded-sm bg-primary/90"></div>
-                <div className="aspect-square rounded-sm bg-primary"></div>
-                <div className="aspect-square rounded-sm bg-primary/60"></div>
-                
-                <div className="aspect-square rounded-sm bg-neutral-900"></div>
-                <div className="aspect-square rounded-sm bg-primary/40"></div>
-                <div className="aspect-square rounded-sm bg-primary/60"></div>
-                <div className="aspect-square rounded-sm bg-primary"></div>
-                <div className="aspect-square rounded-sm bg-primary/10"></div>
-                <div className="aspect-square rounded-sm bg-neutral-900"></div>
-                <div className="aspect-square rounded-sm bg-neutral-900"></div>
-                
-                <div className="aspect-square rounded-sm bg-primary"></div>
-                <div className="aspect-square rounded-sm bg-primary/80"></div>
-            </div>
-
-            <div className="mt-auto pt-6 border-t border-outline-variant/10">
-              <p className="text-xs font-mono text-on-surface-variant">Last activity detected: <span className="text-on-surface">Today, 14:22</span></p>
-              <div className="mt-3 h-1 bg-neutral-900 overflow-hidden">
-                <div className="h-full bg-primary w-[75%] shadow-teal-glow"></div>
+          {/* Recent Races & Level Progress */}
+          <div className="bg-[#111111] p-8 flex flex-col gap-8 rounded-xl border border-white/5">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="font-syne text-xl uppercase tracking-tighter">Pilot_Status</h3>
+                <span className="text-[10px] font-mono text-primary uppercase font-bold tracking-widest">LVL_{user?.level}</span>
               </div>
+              
+              {/* XP Bar */}
+              <div className="space-y-2">
+                <div className="flex justify-between text-[10px] font-mono text-neutral-500 uppercase">
+                  <span>Progress</span>
+                  <span>{user?.xp % 50} / 50 XP</span>
+                </div>
+                <div className="h-2 bg-neutral-900 rounded-full overflow-hidden border border-white/5 p-0.5">
+                  <div 
+                    className="h-full bg-primary rounded-full shadow-teal-glow transition-all duration-1000" 
+                    style={{ width: `${((user?.xp % 50) / 50) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-white/5">
+              <h4 className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">Recent_Combat_Logs</h4>
+              <div className="flex flex-col gap-3">
+                {stats.recentRaces.length > 0 ? (
+                  stats.recentRaces.map(race => (
+                    <div key={race.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-lg hover:border-primary/20 transition-colors">
+                      <div className="flex flex-col">
+                        <span className="text-xs font-syne text-neutral-100 font-bold">{Math.floor(race.wpm)} WPM</span>
+                        <span className="text-[10px] font-mono text-neutral-500">{new Date(race.date).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <span className="text-xs font-mono text-primary font-bold">{Math.floor(race.accuracy)}%</span>
+                        <span className="text-[8px] font-mono text-neutral-600 uppercase">Success</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 text-center border border-dashed border-white/5 rounded-xl">
+                    <span className="material-symbols-outlined text-neutral-700 text-3xl">history</span>
+                    <p className="text-[10px] font-mono text-neutral-600 mt-2 uppercase">Awaiting Data...</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-auto pt-6 border-t border-outline-variant/10 text-center">
+              <Link to="/settings" className="text-[10px] font-mono text-neutral-500 hover:text-primary transition-colors uppercase tracking-widest flex items-center justify-center gap-2">
+                <span className="material-symbols-outlined text-[14px]">tune</span> Customize_HUD
+              </Link>
             </div>
           </div>
 

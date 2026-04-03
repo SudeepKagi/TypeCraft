@@ -98,7 +98,7 @@ const raceHandler = (io, socket, prisma) => {
   });
 
   // Update progress during race
-  socket.on('race:progress', ({ roomCode, progress, wpm }) => {
+  socket.on('race:progress', ({ roomCode, progress, wpm, accuracy }) => {
     const room = rooms[roomCode];
     if (!room || room.status !== 'racing') return;
 
@@ -106,15 +106,16 @@ const raceHandler = (io, socket, prisma) => {
     if (player) {
       player.progress = progress;
       player.wpm = wpm;
+      player.accuracy = accuracy || 100;
       
       if (progress >= 100 && !player.isFinished) {
         player.isFinished = true;
-        // Optionally save to DB here
+        // Save to DB
         if (player.dbId) {
           prisma.raceResult.create({
             data: {
-              wpm: wpm,
-              accuracy: 100, // Just a placeholder, calculate from client if needed
+              wpm: parseFloat(wpm),
+              accuracy: parseFloat(accuracy || 100),
               userId: player.dbId
             }
           }).catch(console.error);
