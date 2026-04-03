@@ -1,0 +1,41 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  email     String   @unique
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  
+  results   RaceResult[]
+  sessions  TypingSession[]
+}
+
+model RaceResult {
+  id        String   @id @default(cuid())
+  wpm       Float
+  accuracy  Float
+  date      DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
+
+model TypingSession {
+  id        String   @id @default(cuid())
+  wpm       Float
+  accuracy  Float
+  duration  Int      // in seconds
+  mode      String   // e.g. "time", "words"
+  date      DateTime @default(now())
+  
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
