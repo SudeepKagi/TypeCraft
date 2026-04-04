@@ -2,12 +2,23 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { calculateWPM, calculateConsistency, calculateAccuracy } from '../lib/wpmCalc';
 import useSettingsStore from '../store/settingsStore';
 
-// Simple Web Audio Sound Generator
+// Simple Web Audio Sound Generator - Singleton Pattern for Zero Latency
+let audioCtx = null;
+
+const getAudioContext = () => {
+  if (!audioCtx) {
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) audioCtx = new AudioContext();
+  }
+  return audioCtx;
+};
+
 const playClickSound = (type, volume) => {
-  const AudioContext = window.AudioContext || window.webkitAudioContext;
-  if (!AudioContext) return;
+  const ctx = getAudioContext();
+  if (!ctx) return;
   
-  const ctx = new AudioContext();
+  // Resume context if suspended (browser security)
+  if (ctx.state === 'suspended') ctx.resume();
   const osc = ctx.createOscillator();
   const gain = ctx.createGain();
   
@@ -94,7 +105,9 @@ export const useTyping = (initialPassage) => {
     if (status === 'finished') return;
 
     const { soundEnabled, soundType, volume } = useSettingsStore.getState();
-    if (soundEnabled) playClickSound(soundType, volume);
+    if (soundEnabled) {
+      playClickSound(soundType, volume);
+    }
 
     const key = e.key;
     if (key.length === 1 || key === 'Backspace' || key === ' ') {

@@ -3,16 +3,17 @@ import { PageWrapper } from '../components/layout/PageWrapper';
 import { WordDisplay } from '../components/typing/WordDisplay';
 import { useTyping } from '../hooks/useTyping';
 import useAuthStore from '../store/authStore';
-import { getRandomContent } from '../lib/contentLibrary';
+import { generatePassage } from '../lib/contentLibrary';
 
 const Play = () => {
   const [selectedMode, setSelectedMode] = useState('words');
   const [selectedDuration, setSelectedDuration] = useState(60);
-  const [passage, setPassage] = useState(() => getRandomContent('words'));
+  const [passage, setPassage] = useState(() => generatePassage('words', 60));
+  const [isTimeWarpActive, setIsTimeWarpActive] = useState(false);
   
   const { 
     words, currentWordIndex, currentCharIndex, status, currentWPM, 
-    accuracy, reset, endTest 
+    accuracy, reset, endTest, keystrokes 
   } = useTyping(passage);
   
   const [timeLeft, setTimeLeft] = useState(selectedDuration);
@@ -20,10 +21,13 @@ const Play = () => {
   const addXP = useAuthStore(state => state.addXP);
 
   const handleRestart = useCallback((mode = selectedMode, duration = selectedDuration) => {
-    const newPassage = getRandomContent(mode);
+    // Generate approx 3.5 words per second + 20 buffer
+    const wordTarget = Math.floor(duration * 3.5) + 20;
+    const newPassage = generatePassage(mode, wordTarget);
     setPassage(newPassage);
     reset(newPassage);
     setTimeLeft(duration);
+    setIsTimeWarpActive(false);
   }, [selectedMode, selectedDuration, reset]);
 
   // Sync timer with duration selection
@@ -32,6 +36,17 @@ const Play = () => {
       setTimeLeft(selectedDuration);
     }
   }, [selectedDuration, status]);
+
+  // Time Warp and XP Logic
+  const potentialXp = Math.max(1, Math.floor(currentWPM * (accuracy / 100) * (selectedDuration / 60)));
+
+  useEffect(() => {
+    if (status === 'running' && currentWPM > 100) {
+      setIsTimeWarpActive(true);
+    } else if (currentWPM < 85) {
+      setIsTimeWarpActive(false);
+    }
+  }, [currentWPM, status]);
 
   useEffect(() => {
     let timer;
@@ -60,7 +75,9 @@ const Play = () => {
           wpm: currentWPM,
           accuracy,
           duration: selectedDuration - timeLeft,
-          mode: selectedMode
+          selectedDuration: selectedDuration,
+          mode: selectedMode,
+          keystrokes
         })
       })
       .then(res => res.json())
@@ -72,6 +89,17 @@ const Play = () => {
       .catch(err => console.error('Failed to save solo result:', err));
     }
   }, [status, userId, currentWPM, accuracy, timeLeft, addXP, selectedDuration, selectedMode]);
+
+  // Auto-refresh logic (5-second window to view stats)
+  useEffect(() => {
+    let refreshTimer;
+    if (status === 'finished') {
+       refreshTimer = setTimeout(() => {
+         handleRestart();
+       }, 5000); 
+    }
+    return () => clearTimeout(refreshTimer);
+  }, [status, handleRestart]);
 
   // Restart shortcut
   useEffect(() => {
@@ -130,11 +158,14 @@ const Play = () => {
         </div>
 
         {/* Typing Arena Canvas */}
-        <WordDisplay 
-          words={words} 
-          currentWordIndex={currentWordIndex} 
-          currentCharIndex={currentCharIndex} 
-        />
+        <div className={`w-full transition-all duration-500 ${isTimeWarpActive ? 'scale-[1.02] drop-shadow-[0_0_30px_rgba(34,211,238,0.2)]' : ''}`}>
+          <WordDisplay 
+            words={words} 
+            currentWordIndex={currentWordIndex} 
+            currentCharIndex={currentCharIndex}
+            isTimeWarpActive={isTimeWarpActive} 
+          />
+        </div>
 
         {/* Action / Error Details */}
         <div className="mt-8 flex gap-6 text-[10px] font-mono items-center opacity-40 uppercase tracking-[0.2em]">
@@ -153,7 +184,7 @@ const Play = () => {
         </div>
 
         {/* Stats Section */}
-        <div className="w-full mt-24 grid grid-cols-1 md:grid-cols-3 gap-8 p-8 border border-white/5 rounded-2xl bg-neutral-950/20">
+        <div className={`w-full mt-24 grid grid-cols-1 md:grid-cols-4 gap-8 p-8 border border-white/5 rounded-2xl transition-colors duration-500 ${isTimeWarpActive ? 'bg-primary/5 border-primary/20' : 'bg-neutral-950/20'}`}>
           <div className="flex flex-col items-center md:items-start gap-1">
             <span className="font-syne text-5xl font-black text-neutral-100 tracking-tighter">{currentWPM}</span>
             <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">Words_Per_Minute</span>
@@ -167,6 +198,12 @@ const Play = () => {
               {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
             </span>
             <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">Time_Remaining</span>
+          </div>
+          <div className="flex flex-col items-center md:items-start gap-1">
+            <span className={`font-syne text-5xl font-black tracking-tighter transition-colors ${isTimeWarpActive ? 'text-primary animate-pulse' : 'text-neutral-400'}`}>
+              +{potentialXp}
+            </span>
+            <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">Potential_XP</span>
           </div>
         </div>
 

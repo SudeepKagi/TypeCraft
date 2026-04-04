@@ -110,15 +110,26 @@ const raceHandler = (io, socket, prisma) => {
       
       if (progress >= 100 && !player.isFinished) {
         player.isFinished = true;
-        // Save to DB
+        // Save to DB and Award XP
         if (player.dbId) {
-          prisma.raceResult.create({
-            data: {
-              wpm: parseFloat(wpm),
-              accuracy: parseFloat(accuracy || 100),
-              userId: player.dbId
-            }
-          }).catch(console.error);
+          // Calculate XP: (WPM * Accuracy / 100)
+          const xpGained = Math.max(1, Math.floor(parseFloat(wpm) * (parseFloat(accuracy || 100) / 100)));
+          
+          Promise.all([
+            prisma.raceResult.create({
+              data: {
+                wpm: parseFloat(wpm),
+                accuracy: parseFloat(accuracy || 100),
+                userId: player.dbId
+              }
+            }),
+            prisma.user.update({
+              where: { id: player.dbId },
+              data: {
+                xp: { increment: xpGained }
+              }
+            })
+          ]).catch(console.error);
         }
       }
 

@@ -19,6 +19,16 @@ const Race = () => {
 
   const [joinCode, setJoinCode] = useState('');
   const [countdown, setCountdown] = useState(null);
+  const [stats, setStats] = useState({ avgWpm: 0, recentAccuracy: 0, rank: '---' });
+
+  useEffect(() => {
+    if (user?.id) {
+       fetch(`http://localhost:4000/api/users/${user.id}/stats`)
+         .then(res => res.json())
+         .then(data => setStats({ ...data, rank: 'PILOT' })) // Simplified rank for now
+         .catch(err => console.error(err));
+    }
+  }, [user?.id]);
 
   useEffect(() => {
     socket.connect();
@@ -63,6 +73,7 @@ const Race = () => {
       socket.emit('race:progress', { roomCode, progress: completionPercent, wpm: currentWPM, accuracy });
     }
   }, [currentWordIndex, currentWPM, status, roomCode, words.length, accuracy]);
+  const isTimeWarpActive = status === 'racing' && currentWPM > 100;
 
 
   const handleCreateRace = () => {
@@ -100,12 +111,11 @@ const Race = () => {
         {/* Race HUD & Track Area */}
         <div className="lg:col-span-8 flex flex-col gap-6">
           
-          {/* HUD Stats */}
-          <div className="flex items-center justify-between bg-neutral-900/50 p-4 rounded-lg border border-neutral-800/50">
+          <div className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-500 ${isTimeWarpActive ? 'bg-primary/10 border-primary shadow-glow-primary' : 'bg-neutral-900/50 border-neutral-800/50'}`}>
             <div className="flex items-center gap-6">
               <div class="flex items-center gap-2">
-                <span class="flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
-                <span class="text-xs font-bold tracking-widest text-red-500">LIVE</span>
+                <span class={`flex h-2 w-2 rounded-full animate-pulse ${isTimeWarpActive ? 'bg-primary' : 'bg-red-500'}`}></span>
+                <span class={`text-xs font-bold tracking-widest ${isTimeWarpActive ? 'text-primary' : 'text-red-500'}`}>LIVE</span>
               </div>
               <div class="flex flex-col">
                 <span class="text-[10px] text-neutral-500 font-inter uppercase tracking-tighter">Room Code</span>
@@ -115,11 +125,11 @@ const Race = () => {
             <div class="flex gap-12">
               <div class="text-center">
                 <span class="block text-[10px] text-neutral-500 font-inter uppercase">Time</span>
-                <span class="text-xl font-syne text-neutral-100">00:42.12</span>
+                <span class="text-xl font-syne text-neutral-100 italic">00:42.12</span>
               </div>
               <div class="text-center">
                 <span class="block text-[10px] text-neutral-500 font-inter uppercase">WPM</span>
-                <span class="text-xl font-syne text-primary">114</span>
+                <span className={`text-xl font-syne transition-colors ${isTimeWarpActive ? 'text-white' : 'text-primary'}`}>{Math.floor(currentWPM)}</span>
               </div>
               <div class="text-center">
                 <span class="block text-[10px] text-neutral-500 font-inter uppercase">ACC</span>
@@ -129,12 +139,13 @@ const Race = () => {
           </div>
 
           {/* Typing Engine Area */}
-          <div className={`custom-glass p-10 rounded-xl relative overflow-hidden border transition-all duration-500 ${status === 'racing' ? 'border-primary/40' : 'border-outline-variant/10 opacity-50 pointer-events-none'}`}>
+          <div className={`custom-glass p-10 rounded-xl relative overflow-hidden border transition-all duration-500 ${isTimeWarpActive ? 'border-primary shadow-teal-glow scale-[1.01]' : (status === 'racing' ? 'border-primary/40' : 'border-outline-variant/10 opacity-50 pointer-events-none')}`}>
             <div className={`absolute top-0 left-0 w-1 h-full bg-primary transition-opacity ${status === 'racing' ? 'opacity-100' : 'opacity-0'}`}></div>
             <WordDisplay 
               words={words} 
               currentWordIndex={currentWordIndex} 
               currentCharIndex={currentCharIndex} 
+              isTimeWarpActive={isTimeWarpActive}
             />
           </div>
 
@@ -182,14 +193,14 @@ const Race = () => {
             <div class="space-y-4">
               <div class="flex justify-between items-end">
                 <span class="text-[10px] uppercase font-inter text-neutral-500 tracking-widest">Global Rank</span>
-                <span class="text-lg font-mono text-neutral-100">#412</span>
+                <span class="text-lg font-mono text-neutral-100">{stats.rank}</span>
               </div>
               <div class="w-full h-[2px] bg-neutral-800">
                 <div class="w-1/3 h-full bg-primary"></div>
               </div>
               <div class="flex justify-between items-end pt-2">
                 <span class="text-[10px] uppercase font-inter text-neutral-500 tracking-widest">Consistency</span>
-                <span class="text-lg font-mono text-primary">94.2%</span>
+                <span class="text-lg font-mono text-primary">{stats.recentAccuracy.toFixed(1)}%</span>
               </div>
             </div>
 

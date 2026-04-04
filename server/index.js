@@ -49,7 +49,7 @@ app.post('/api/users', async (req, res) => {
 
 // Save result and update XP
 app.post('/api/results', async (req, res) => {
-  const { userId, wpm, accuracy, duration, mode } = req.body;
+  const { userId, wpm, accuracy, duration, selectedDuration, mode, keystrokes } = req.body;
 
   try {
     const result = await prisma.raceResult.create({
@@ -60,21 +60,48 @@ app.post('/api/results', async (req, res) => {
       }
     });
 
-    if (mode === 'solo' || mode === 'trainer') {
+    // Update CharacterStats if keystrokes provided
+    if (keystrokes && Array.isArray(keystrokes)) {
+      // Group by char first for efficient DB updates? 
+      // For now, iterative upsert is safe for small sets (keystrokes is usually ~50-300 items)
+      for (const stroke of keystrokes) {
+        if (stroke.char && stroke.char.length === 1) {
+          const char = stroke.char.toLowerCase();
+          await prisma.characterStat.upsert({
+            where: { userId_char: { userId, char } },
+            update: {
+              correctCount: { increment: stroke.correct ? 1 : 0 },
+              totalCount: { increment: 1 }
+            },
+            create: {
+              userId,
+              char,
+              correctCount: stroke.correct ? 1 : 0,
+              totalCount: 1
+            }
+          });
+        }
+      }
+    }
+
+    const activeDuration = parseInt(duration) || 60;
+    const challengeDuration = parseInt(selectedDuration) || activeDuration;
+
+    if (mode === 'solo' || mode === 'trainer' || mode === 'words' || mode === 'quotes' || mode === 'code') {
       await prisma.typingSession.create({
         data: {
           wpm: parseFloat(wpm),
           accuracy: parseFloat(accuracy),
-          duration: parseInt(duration) || 60,
+          duration: activeDuration,
           mode: mode || 'time',
           userId
         }
       });
     }
 
-    // Calculate XP: (WPM * Accuracy / 100) * (Duration / 60)
+    // Calculate XP: (WPM * Accuracy / 100) * (ChallengeDuration / 60)
     // Ensures scaling by time commitment
-    const rawXp = parseFloat(wpm) * (parseFloat(accuracy) / 100) * (duration / 60);
+    const rawXp = parseFloat(wpm) * (parseFloat(accuracy) / 100) * (challengeDuration / 60);
     const xpGained = Math.max(1, Math.floor(rawXp));
     
     const updatedUser = await prisma.user.update({
@@ -149,6 +176,28 @@ app.get('/api/users/:userId/stats', async (req, res) => {
   }
 });
 
+// Get heatmap statistics
+app.get('/api/users/:userId/heatmap', async (req, res) => {
+  const { userId } = req.params;
+  try {
+    const stats = await prisma.characterStat.findMany({
+      where: { userId }
+    });
+    // Return map for easier frontend consumption
+    const heatMap = {};
+    stats.forEach(s => {
+      heatMap[s.char] = {
+        accuracy: (s.correctCount / s.totalCount) * 100,
+        total: s.totalCount
+      };
+    });
+    res.json(heatMap);
+  } catch (error) {
+    console.error('[Heatmap Error]', error);
+    res.status(500).json({ error: 'Failed to fetch heatmap data' });
+  }
+});
+
 // Sockets
 io.on('connection', (socket) => {
   console.log(`[Socket] User connected: ${socket.id}`);
@@ -217,16 +266,35 @@ app.get('/api/leaderboard', async (req, res) => {
 app.post('/api/ai/train', async (req, res) => {
   const { weakness } = req.body;
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-    const prompt = `Generate a 50-word typing practice passage focusing heavily on the characters: ${weakness}. Return ONLY the text, no quotes or intro.`;
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Corrected to 1.5-flash
+    const prompt = `Generate a JSON object for a typing practice session targeting these characters: "${weakness}".
+    Include:
+    1. "passage": A 50-word text focusing heavily on those characters.
+    2. "insights": A short (1 sentence) technical explanation of why this passage helps muscle memory for these keys.
+    Return ONLY JSON.`;
+    
     const result = await model.generateContent(prompt);
     const response = await result.response;
-    const text = response.text();
-    res.json({ passage: text });
+    const rawText = response.text().trim();
+    
+    // Robust JSON extraction to handle Gemini's optional markdown or extra text
+    let data;
+    try {
+      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
+      data = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawText);
+    } catch (e) {
+      console.warn('[AI Parse Warning] Trying secondary fallback');
+      throw new Error('Malformed AI JSON');
+    }
+    
+    res.json(data);
   } catch (error) {
     console.error('[Train Error]', error.message);
-    const fallback = `Focus entirely on your targeted keys: ${weakness}. Repetition builds pathways. Mastering ${weakness} requires patience. Execute precision strokes on ${weakness} until muscle memory solidifies completely without hesitation or error.`;
-    res.json({ passage: fallback });
+    const fallback = {
+      passage: `Focus entirely on your targeted keys: ${weakness}. Repetition builds pathways. Mastering ${weakness} requires patience. Execute precision strokes on ${weakness} until muscle memory solidifies completely without hesitation or error.`,
+      insights: `Standard rhythmic repetition protocol initialized for ${weakness}.`
+    };
+    res.json(fallback);
   }
 });
 

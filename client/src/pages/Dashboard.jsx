@@ -14,6 +14,7 @@ const Dashboard = () => {
     recentAccuracy: 0,
     recentRaces: []
   });
+  const [heatmap, setHeatmap] = useState({});
 
   useEffect(() => {
     if (userId) {
@@ -21,6 +22,11 @@ const Dashboard = () => {
         .then(res => res.json())
         .then(data => setStats(data))
         .catch(err => console.error('Failed to fetch stats:', err));
+
+      fetch(`http://localhost:4000/api/users/${userId}/heatmap`)
+        .then(res => res.json())
+        .then(data => setHeatmap(data))
+        .catch(err => console.error('Failed to fetch heatmap:', err));
     }
   }, [userId]);
 
@@ -40,6 +46,25 @@ const Dashboard = () => {
   };
 
   const sparklinePath = generatePath(stats.momentum);
+
+  const getHeatColor = (char) => {
+    const data = heatmap[char.toLowerCase()];
+    if (!data || data.total < 1) return 'bg-neutral-800/30 text-neutral-600';
+    const acc = data.accuracy;
+    if (acc >= 98) return 'bg-primary text-on-primary font-bold shadow-[0_0_10px_rgba(29,158,117,0.4)]';
+    if (acc >= 90) return 'bg-primary/70 text-on-primary-container';
+    if (acc >= 80) return 'bg-primary/40 text-neutral-300';
+    if (acc >= 60) return 'bg-error/40 text-neutral-200';
+    return 'bg-error text-white font-bold shadow-[0_0_10px_rgba(255,82,82,0.4)]';
+  };
+
+  const criticalWeakness = Object.entries(heatmap)
+    .filter(([_, data]) => data.total > 5)
+    .sort((a, b) => a[1].accuracy - b[1].accuracy)[0];
+    
+  const peakPrecision = Object.entries(heatmap)
+    .filter(([_, data]) => data.total > 5)
+    .sort((a, b) => b[1].accuracy - a[1].accuracy)[0];
 
   return (
     <PageWrapper>
@@ -199,49 +224,34 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="flex flex-col gap-2 max-w-4xl mx-auto w-full">
-              <div className="flex gap-1 justify-center">
-                <div className="w-12 h-12 bg-primary/80 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">Q</div>
-                <div className="w-12 h-12 bg-primary flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">W</div>
-                <div className="w-12 h-12 bg-primary/90 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">E</div>
-                <div className="w-12 h-12 bg-error/40 flex items-center justify-center font-mono text-on-surface text-xs rounded-sm">R</div>
-                <div className="w-12 h-12 bg-primary/70 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">T</div>
-                <div className="w-12 h-12 bg-primary/60 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">Y</div>
-                <div className="w-12 h-12 bg-primary flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">U</div>
-                <div className="w-12 h-12 bg-primary flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">I</div>
-                <div className="w-12 h-12 bg-primary/90 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">O</div>
-                <div className="w-12 h-12 bg-primary flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">P</div>
-              </div>
-              <div className="flex gap-1 justify-center ml-4">
-                <div className="w-12 h-12 bg-primary flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">A</div>
-                <div className="w-12 h-12 bg-primary/80 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">S</div>
-                <div className="w-12 h-12 bg-primary/90 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">D</div>
-                <div className="w-12 h-12 bg-error/60 flex items-center justify-center font-mono text-on-surface text-xs rounded-sm">F</div>
-                <div className="w-12 h-12 bg-primary/70 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">G</div>
-                <div className="w-12 h-12 bg-primary/60 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">H</div>
-                <div className="w-12 h-12 bg-primary flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">J</div>
-                <div className="w-12 h-12 bg-primary flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">K</div>
-                <div className="w-12 h-12 bg-primary/90 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">L</div>
-              </div>
-              <div className="flex gap-1 justify-center ml-8">
-                <div className="w-12 h-12 bg-error flex items-center justify-center font-mono text-on-primary text-xs rounded-sm">Z</div>
-                <div className="w-12 h-12 bg-primary/80 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">X</div>
-                <div className="w-12 h-12 bg-primary/90 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">C</div>
-                <div className="w-12 h-12 bg-primary flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">V</div>
-                <div className="w-12 h-12 bg-primary/70 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">B</div>
-                <div className="w-12 h-12 bg-primary/60 flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">N</div>
-                <div className="w-12 h-12 bg-primary flex items-center justify-center font-mono text-on-primary-container text-xs rounded-sm">M</div>
-              </div>
+            <div className="flex flex-col gap-2 max-w-4xl mx-auto w-full mb-4">
+              {[
+                ['Q', 'W', 'E', 'R', 'T', 'Y', 'U', 'I', 'O', 'P'],
+                ['A', 'S', 'D', 'F', 'G', 'H', 'J', 'K', 'L'],
+                ['Z', 'X', 'C', 'V', 'B', 'N', 'M']
+              ].map((row, i) => (
+                <div key={i} className={`flex gap-1 justify-center ${i === 1 ? 'ml-4' : i === 2 ? 'ml-8' : ''}`}>
+                  {row.map(key => (
+                    <div key={key} className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center font-mono text-xs rounded-sm transition-all duration-500 ${getHeatColor(key)}`}>
+                      {key}
+                    </div>
+                  ))}
+                </div>
+              ))}
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-6 border-t border-outline-variant/10">
               <div className="flex flex-col">
                 <span className="text-[10px] font-mono text-on-surface-variant uppercase">Critical Weakness</span>
-                <span className="text-xl font-syne text-error mt-1">Z KEY</span>
+                <span className={`text-xl font-syne mt-1 uppercase ${criticalWeakness ? 'text-error' : 'text-neutral-500 text-sm italic font-inter'}`}>
+                   {criticalWeakness ? `${criticalWeakness[0]} KEY (${criticalWeakness[1].accuracy.toFixed(0)}%)` : 'Insufficient Data'}
+                </span>
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-mono text-on-surface-variant uppercase">Peak Precision</span>
-                <span className="text-xl font-syne text-primary">J KEY</span>
+                <span className={`text-xl font-syne mt-1 uppercase ${peakPrecision ? 'text-primary' : 'text-neutral-500 text-sm italic font-inter'}`}>
+                   {peakPrecision ? `${peakPrecision[0]} KEY (${peakPrecision[1].accuracy.toFixed(0)}%)` : 'Insufficient Data'}
+                </span>
               </div>
               <div className="flex flex-col">
                 <span className="text-[10px] font-mono text-on-surface-variant uppercase">Average Latency</span>

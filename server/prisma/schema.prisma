@@ -12,11 +12,12 @@ model User {
   username  String   @unique
   email     String   @unique
   avatarUrl String?
-  xp        Int      @default(0)
+  level     Int      @default(1)
   createdAt DateTime @default(now())
   
   results   RaceResult[]
   sessions  TypingSession[]
+  charStats CharacterStat[]
 }
 
 model RaceResult {
@@ -39,4 +40,16 @@ model TypingSession {
   
   userId    String
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model CharacterStat {
+  id           String @id @default(cuid())
+  char         String // the character targeted
+  correctCount Int    @default(0)
+  totalCount   Int    @default(0)
+  
+  userId       String
+  user         User   @relation(fields: [userId], references: [id])
+
+  @@unique([userId, char])
 }

@@ -1,19 +1,19 @@
 import React, { useRef, useEffect } from 'react';
 import { Caret } from './Caret';
 
-const Word = ({ word, isCurrent, wordRef }) => {
+const Word = ({ word, isCurrent, wordRef, isTimeWarpActive }) => {
   return (
     <div 
       ref={isCurrent ? wordRef : null} 
-      className={`inline-block mr-2 mb-4 transition-colors ${word.state === 'skipped-with-errors' ? 'underline decoration-error' : ''}`}
+      className={`inline-block mr-2 mb-4 transition-all duration-300 ${word.state === 'skipped-with-errors' ? 'underline decoration-error' : ''} ${isTimeWarpActive && isCurrent ? 'scale-110 brightness-125' : ''}`}
     >
       {word.letters.map((l, i) => {
         let colorClass = 'text-outline-variant';
-        if (l.state === 'correct') colorClass = 'text-on-surface';
+        if (l.state === 'correct') colorClass = isTimeWarpActive ? 'text-primary drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'text-on-surface';
         if (l.state === 'incorrect') colorClass = 'text-error';
         
         return (
-          <span key={i} className={`${colorClass}`}>
+          <span key={i} className={`${colorClass} transition-all duration-200`}>
             {l.char}
           </span>
         );
@@ -22,7 +22,7 @@ const Word = ({ word, isCurrent, wordRef }) => {
   );
 };
 
-export const WordDisplay = ({ words, currentWordIndex, currentCharIndex }) => {
+export const WordDisplay = ({ words, currentWordIndex, currentCharIndex, isTimeWarpActive }) => {
   const currentWordRef = useRef(null);
   const containerRef = useRef(null);
 
@@ -36,6 +36,8 @@ export const WordDisplay = ({ words, currentWordIndex, currentCharIndex }) => {
         // If word is getting lower than 3 lines down (approx 3 * 36px), scroll up
         if (relativeTop > 100) {
              containerRef.current.style.transform = `translateY(-${relativeTop - 36}px)`;
+        } else if (currentWordIndex === 0) {
+             containerRef.current.style.transform = `translateY(0px)`;
         }
     }
   }, [currentWordIndex]);
@@ -52,9 +54,10 @@ export const WordDisplay = ({ words, currentWordIndex, currentCharIndex }) => {
             word={word} 
             isCurrent={index === currentWordIndex} 
             wordRef={currentWordRef}
+            isTimeWarpActive={isTimeWarpActive}
           />
         ))}
-        {<Caret currentWordRef={currentWordRef} currentCharIndex={currentCharIndex} />}
+        <Caret currentWordRef={currentWordRef} currentCharIndex={currentCharIndex} isTimeWarpActive={isTimeWarpActive} />
       </div>
     </div>
   );

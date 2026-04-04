@@ -7,13 +7,14 @@ import useAuthStore from '../store/authStore';
 const Trainer = () => {
   const [weakness, setWeakness] = useState('');
   const [passage, setPassage] = useState('');
+  const [insights, setInsights] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const userId = useAuthStore(state => state.userId);
 
   const { 
     words, currentWordIndex, currentCharIndex, status, currentWPM, 
-    accuracy, reset 
+    accuracy, reset, keystrokes 
   } = useTyping(passage || "Awaiting training passage...");
   
   const addXP = useAuthStore(state => state.addXP);
@@ -28,7 +29,8 @@ const Trainer = () => {
           userId,
           wpm: currentWPM,
           accuracy,
-          mode: 'trainer'
+          mode: 'trainer',
+          keystrokes
         })
       })
       .then(res => res.json())
@@ -57,6 +59,7 @@ const Trainer = () => {
       const data = await response.json();
       
       setPassage(data.passage.trim());
+      setInsights(data.insights);
       reset(data.passage.trim()); // explicitly reset the typing hook
     } catch (err) {
       setError("AI Generation failed. Check local GEMINI_API_KEY in server/.env");
@@ -66,6 +69,7 @@ const Trainer = () => {
   };
 
   const isRacing = status === 'running' || status === 'finished';
+  const isTimeWarpActive = status === 'running' && currentWPM > 80;
 
   return (
     <PageWrapper>
@@ -147,14 +151,26 @@ const Trainer = () => {
              </div>
 
              {/* Typing Component */}
-             <div className="relative custom-glass p-8 rounded-xl border border-neutral-800/80 mb-8 min-h-[160px]">
-                <WordDisplay 
-                  words={words} 
-                  currentWordIndex={currentWordIndex} 
-                  currentCharIndex={currentCharIndex} 
-                  status={status} 
-                />
-             </div>
+              <div className={`relative custom-glass p-8 rounded-xl border transition-all duration-500 mb-8 min-h-[160px] ${isTimeWarpActive ? 'border-primary/50 shadow-teal-glow translate-y-[-2px]' : 'border-neutral-800/80'}`}>
+                 <WordDisplay 
+                   words={words} 
+                   currentWordIndex={currentWordIndex} 
+                   currentCharIndex={currentCharIndex} 
+                   status={status} 
+                   isTimeWarpActive={isTimeWarpActive}
+                 />
+              </div>
+
+              {/* Neural Analysis Insights */}
+              {insights && (
+                 <div className="mb-12 p-6 bg-primary/5 border-l-2 border-primary rounded-r-xl animate-fade-in flex items-start gap-4">
+                    <span className="material-symbols-outlined text-primary text-[20px] mt-1">neurology</span>
+                    <div className="flex flex-col gap-1">
+                       <span className="text-[10px] font-mono text-primary font-bold uppercase tracking-widest leading-none">Neural Protocol Insight</span>
+                       <p className="text-sm font-inter text-neutral-300 leading-relaxed italic">"{insights}"</p>
+                    </div>
+                 </div>
+              )}
 
              {/* Footer Actions */}
              <div className="flex flex-col md:flex-row gap-4 items-center justify-center">
