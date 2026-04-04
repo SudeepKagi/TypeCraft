@@ -1,17 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { PageWrapper } from '../components/layout/PageWrapper';
 import useAuthStore from '../store/authStore';
+import { calculateRank } from '../lib/rankCalc';
 
 const Leaderboard = () => {
-  const { user } = useAuthStore();
+  const user = useAuthStore(state => state.user);
+// ... (rest of the intermediate state stays as I just added it)
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Derive my standing
-  const myStandingIndex = leaderboard.findIndex(p => p.username === user.username);
-  const myRank = myStandingIndex !== -1 ? myStandingIndex + 1 : 42; 
-  const myWpm = myStandingIndex !== -1 ? leaderboard[myStandingIndex].wpm : 152;
+  const myStandingIndex = user ? leaderboard.findIndex(p => p.username === user.username) : -1;
+  const myRank = myStandingIndex !== -1 ? myStandingIndex + 1 : '---'; 
+  const myWpm = myStandingIndex !== -1 ? leaderboard[myStandingIndex].wpm : 0;
+  const myAccuracy = myStandingIndex !== -1 ? leaderboard[myStandingIndex].accuracy : 100;
   
+  // Calculate my rank info
+  const myRankInfo = calculateRank(myWpm, myAccuracy);
+
   useEffect(() => {
     fetch('http://localhost:4000/api/leaderboard')
       .then(res => res.json())
@@ -35,10 +41,13 @@ const Leaderboard = () => {
              <div className="absolute top-0 right-0 w-32 h-32 bg-primary/5 blur-[50px] rounded-full"></div>
              <span className="text-[10px] uppercase font-inter text-neutral-500 tracking-widest font-bold">Your Standing</span>
              
-             <div>
+             <div className="flex items-center gap-4">
                 <h1 className="font-syne text-5xl font-black text-primary italic drop-shadow-[0_0_15px_rgba(29,158,117,0.3)]">#{myRank}</h1>
-                <p className="text-xs text-neutral-400 font-inter mt-1">Top 10% Globally</p>
+                <div className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border border-white/5 ${myRankInfo.glow}`} style={{ backgroundColor: myRankInfo.color + '20', color: myRankInfo.color }}>
+                   {myRankInfo.name}
+                </div>
              </div>
+             <p className="text-xs text-neutral-400 font-inter">Top of the pack.</p>
 
              <div className="w-full h-[1px] bg-neutral-800/50 my-2"></div>
 
@@ -54,12 +63,12 @@ const Leaderboard = () => {
 
           <div className="p-6 rounded-xl border border-primary/20 bg-primary/5 relative overflow-hidden">
              <div className="absolute top-0 right-0 w-1 h-full bg-primary"></div>
-             <span className="text-[10px] uppercase font-inter text-primary tracking-widest font-bold">Weekly Goal</span>
+              <span className="text-[10px] uppercase font-inter text-primary tracking-widest font-bold">Weekly Goal</span>
              <p className="text-xs text-neutral-300 font-inter mt-3 leading-relaxed">
-               You are 3,200 XP away from the next tier.
+               You are {Math.pow(user?.level || 1, 2) * 50 - (user?.xp || 0)} XP away from the next tier.
              </p>
              <div className="mt-4 w-full h-[3px] bg-neutral-900 rounded-full overflow-hidden">
-               <div className="h-full bg-primary w-[65%]"></div>
+               <div className="h-full bg-primary" style={{ width: `${Math.min(100, Math.max(0, (((user?.xp || 0) - Math.pow((user?.level || 1) - 1, 2) * 50) / (Math.pow(user?.level || 1, 2) * 50 - Math.pow((user?.level || 1) - 1, 2) * 50)) * 100))}%` }}></div>
              </div>
           </div>
         </div>
@@ -96,7 +105,8 @@ const Leaderboard = () => {
             ) : leaderboard.map((p, i) => {
               const rank = i + 1;
               const isTop3 = rank <= 3;
-              const isMe = p.username === user.username;
+              const isMe = user && p.username === user.username;
+              const rankInfo = calculateRank(p.wpm, p.accuracy);
 
               return (
                 <div 
@@ -109,8 +119,8 @@ const Leaderboard = () => {
                 >
                   <div className={`col-span-1 font-syne font-black text-xl italic ${
                     rank === 1 ? 'text-[#FFB800]' : 
-                    rank === 2 ? 'text-[#FFB800]' : 
-                    rank === 3 ? 'text-[#FFB800]' : 
+                    rank === 2 ? 'text-[#FFD700]' : 
+                    rank === 3 ? 'text-[#CD7F32]' : 
                     isMe ? 'text-primary' :
                     'text-neutral-500 text-sm not-italic font-mono'
                   }`}>
@@ -127,9 +137,12 @@ const Leaderboard = () => {
                          </div>
                       )}
                     </div>
-                    <span className={`font-mono text-sm truncate ${isMe ? 'text-primary font-bold' : 'text-neutral-300'}`}>
-                      {isMe ? 'You (' + p.username + ')' : p.username}
-                    </span>
+                    <div className="flex flex-col">
+                      <span className={`font-mono text-sm truncate ${isMe ? 'text-primary font-bold' : 'text-neutral-300'}`}>
+                        {isMe ? 'You (' + p.username + ')' : p.username}
+                      </span>
+                      <span className="text-[10px] font-mono leading-none" style={{ color: rankInfo.color }}>{rankInfo.name}</span>
+                    </div>
                   </div>
 
                   <div className={`col-span-2 text-center font-syne font-bold ${isTop3 || isMe ? 'text-primary' : 'text-neutral-100'}`}>

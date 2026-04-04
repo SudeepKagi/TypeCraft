@@ -60,45 +60,52 @@ const generateWords = (passage) => {
 };
 
 export const useTyping = (initialPassage) => {
-  const [words, setWords] = useState(() => generateWords(initialPassage));
-  const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  const [currentCharIndex, setCurrentCharIndex] = useState(0);
-  const [status, setStatus] = useState('idle'); // idle, running, finished
-  const [startTime, setStartTime] = useState(null);
-  const [keystrokes, setKeystrokes] = useState([]);
-  const [errors, setErrors] = useState(0);
-  const [currentWPM, setCurrentWPM] = useState(0);
-  const [wpmHistory, setWpmHistory] = useState([]);
+  const [session, setSession] = useState({
+    words: generateWords(initialPassage),
+    currentWordIndex: 0,
+    currentCharIndex: 0,
+    status: 'idle',
+    startTime: null,
+    keystrokes: [],
+    errors: 0,
+    currentWPM: 0,
+    wpmHistory: []
+  });
   
   const wpmIntervalRef = useRef(null);
 
   const reset = useCallback((newPassage = initialPassage) => {
-    setWords(generateWords(newPassage));
-    setCurrentWordIndex(0);
-    setCurrentCharIndex(0);
-    setStatus('idle');
-    setStartTime(null);
-    setKeystrokes([]);
-    setErrors(0);
-    setWpmHistory([]);
-    setCurrentWPM(0);
+    setSession({
+      words: generateWords(newPassage),
+      currentWordIndex: 0,
+      currentCharIndex: 0,
+      status: 'idle',
+      startTime: null,
+      keystrokes: [],
+      errors: 0,
+      currentWPM: 0,
+      wpmHistory: []
+    });
     if (wpmIntervalRef.current) cancelAnimationFrame(wpmIntervalRef.current);
   }, [initialPassage]);
 
   // Derived values
-  const correctChars = words.reduce((acc, word) => {
+  const correctChars = session.words.reduce((acc, word) => {
     return acc + (word.letters ? word.letters.filter(l => l.state === 'correct').length : 0);
-  }, 0) + (currentWordIndex > 0 ? words.slice(0, currentWordIndex).filter(w => w.state === 'typed').length : 0);
+  }, 0);
 
   // Update WPM in a side effect or calculation
   useEffect(() => {
-    if (status === 'running' && startTime) {
-      const elapsedMinutes = (Date.now() - startTime) / 60000;
-      if (elapsedMinutes > 0) {
-        setCurrentWPM(calculateWPM(correctChars, elapsedMinutes));
-      }
+    if (session.status === 'running' && session.startTime) {
+      const now = Date.now();
+      const elapsedMs = Math.max(1000, now - session.startTime); // Clamp to 1s min to prevent spikes
+      const elapsedMinutes = elapsedMs / 60000;
+      setSession(prev => ({
+        ...prev,
+        currentWPM: calculateWPM(correctChars, elapsedMinutes)
+      }));
     }
-  }, [status, startTime, correctChars]);
+  }, [session.status, session.startTime, correctChars]);
 
   const handleKeyDown = useCallback((e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -113,104 +120,102 @@ export const useTyping = (initialPassage) => {
     if (key.length === 1 || key === 'Backspace' || key === ' ') {
       e.preventDefault();
       
-      if (status === 'idle') {
-        setStatus('running');
-        setStartTime(Date.now());
-      }
+      setSession(prev => {
+        const newSession = { ...prev };
+        if (newSession.status === 'idle') {
+          newSession.status = 'running';
+          newSession.startTime = Date.now();
+        }
 
-      setWords(prevWords => {
-        const newWords = [...prevWords];
-        const currentWord = { ...newWords[currentWordIndex] };
+        const newWords = [...newSession.words];
+        const currentWord = { ...newWords[newSession.currentWordIndex] };
+        currentWord.letters = [...currentWord.letters];
         
         if (key === 'Backspace') {
-          if (currentCharIndex > 0) {
-            currentWord.letters = [...currentWord.letters];
-            const charToReset = currentWord.letters[currentCharIndex - 1];
-            if (charToReset.state === 'incorrect') {
-                // Keep error count logic separate, just reset state
-            }
-            currentWord.letters[currentCharIndex - 1] = { ...charToReset, state: 'untouched' };
-            newWords[currentWordIndex] = currentWord;
-            setCurrentCharIndex(currentCharIndex - 1);
-          } else if (currentWordIndex > 0) {
-            const prevWord = newWords[currentWordIndex - 1];
+          if (newSession.currentCharIndex > 0) {
+            currentWord.letters[newSession.currentCharIndex - 1] = { 
+              ...currentWord.letters[newSession.currentCharIndex - 1], 
+              state: 'untouched' 
+            };
+            newWords[newSession.currentWordIndex] = currentWord;
+            newSession.currentCharIndex -= 1;
+          } else if (newSession.currentWordIndex > 0) {
+            const prevWord = { ...newWords[newSession.currentWordIndex - 1] };
             if (prevWord.state === 'skipped-with-errors') {
-              setCurrentWordIndex(currentWordIndex - 1);
-              setCurrentCharIndex(prevWord.letters.length);
-              newWords[currentWordIndex - 1] = { ...prevWord, state: 'untouched' };
+              newSession.currentWordIndex -= 1;
+              newSession.currentCharIndex = prevWord.letters.length;
+              prevWord.state = 'untouched';
+              newWords[newSession.currentWordIndex] = prevWord;
             }
           }
         } else if (key === ' ') {
-          if (currentCharIndex > 0) {
+          if (newSession.currentCharIndex > 0) {
             const hasErrors = currentWord.letters.some(l => l.state === 'incorrect');
-            const isComplete = currentCharIndex === currentWord.letters.length;
+            const isComplete = newSession.currentCharIndex === currentWord.letters.length;
             
-            if (hasErrors || !isComplete) {
-              currentWord.state = 'skipped-with-errors';
-            } else {
-              currentWord.state = 'typed';
-            }
-            newWords[currentWordIndex] = currentWord;
-            setCurrentWordIndex(currentWordIndex + 1);
-            setCurrentCharIndex(0);
+            currentWord.state = (hasErrors || !isComplete) ? 'skipped-with-errors' : 'typed';
+            newWords[newSession.currentWordIndex] = currentWord;
+            newSession.currentWordIndex += 1;
+            newSession.currentCharIndex = 0;
           }
         } else {
-          // Regular character typing
-          if (currentCharIndex < currentWord.letters.length) {
-            currentWord.letters = [...currentWord.letters];
-            const expectedChar = currentWord.letters[currentCharIndex].char;
+          if (newSession.currentCharIndex < currentWord.letters.length) {
+            const expectedChar = currentWord.letters[newSession.currentCharIndex].char;
             const isCorrect = key === expectedChar;
             
-            currentWord.letters[currentCharIndex] = {
-              ...currentWord.letters[currentCharIndex],
+            currentWord.letters[newSession.currentCharIndex] = {
+              ...currentWord.letters[newSession.currentCharIndex],
               state: isCorrect ? 'correct' : 'incorrect'
             };
 
-            if (!isCorrect) setErrors(e => e + 1);
-
-            setKeystrokes(prev => [...prev, { char: key, correct: isCorrect, timestamp: Date.now() }]);
-            newWords[currentWordIndex] = currentWord;
-            setCurrentCharIndex(currentCharIndex + 1);
-          } else {
-             // Typed past word length (extra incorrect characters)
-             // simplified for this implementaton to just bounce or ignore
+            if (!isCorrect) newSession.errors += 1;
+            newSession.keystrokes = [...newSession.keystrokes, { char: key, correct: isCorrect, timestamp: Date.now() }];
+            newWords[newSession.currentWordIndex] = currentWord;
+            newSession.currentCharIndex += 1;
           }
         }
         
-        if (newWords[currentWordIndex].state === 'typed' && currentWordIndex === words.length - 1) {
-          setStatus('finished');
-          if (wpmIntervalRef.current) cancelAnimationFrame(wpmIntervalRef.current);
+        newSession.words = newWords;
+
+        // Check if finished
+        if (newSession.currentWordIndex === newSession.words.length) {
+           newSession.status = 'finished';
+        } else if (newSession.words[newSession.currentWordIndex].state === 'typed' && newSession.currentWordIndex === newSession.words.length - 1) {
+           newSession.status = 'finished';
         }
         
-        return newWords;
+        return newSession;
       });
     }
-  }, [status, currentWordIndex, currentCharIndex, startTime, words.length]);
+  }, [session.status]);
 
   // WPM Sampling via RAF
   useEffect(() => {
     let lastSampleTime = Date.now();
     
     const sampleWPM = () => {
-      if (status !== 'running') return;
+      if (session.status !== 'running') return;
       const now = Date.now();
       if (now - lastSampleTime >= 1000) {
         lastSampleTime = now;
-        setWpmHistory(prev => {
-           const elapsedMinutes = (now - startTime) / 60000;
+        setSession(prev => {
+           const elapsedMinutes = Math.max(1000, now - prev.startTime) / 60000;
            const current = calculateWPM(correctChars, elapsedMinutes);
-           return [...prev, current];
+           return {
+             ...prev,
+             wpmHistory: [...prev.wpmHistory, current]
+           };
         });
       }
       wpmIntervalRef.current = requestAnimationFrame(sampleWPM);
     };
 
-    if (status === 'running') {
+    if (session.status === 'running') {
       wpmIntervalRef.current = requestAnimationFrame(sampleWPM);
     }
 
     return () => cancelAnimationFrame(wpmIntervalRef.current);
-  }, [status, startTime, correctChars]);
+  }, [session.status, session.startTime, correctChars]);
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -218,21 +223,21 @@ export const useTyping = (initialPassage) => {
   }, [handleKeyDown]);
 
   const endTest = useCallback(() => {
-    setStatus('finished');
+    setSession(prev => ({ ...prev, status: 'finished' }));
     cancelAnimationFrame(wpmIntervalRef.current);
   }, []);
 
   return {
-    words,
-    currentWordIndex,
-    currentCharIndex,
-    status,
-    currentWPM,
-    errors,
-    keystrokes,
-    wpmHistory,
-    accuracy: calculateAccuracy(correctChars, keystrokes.length),
-    consistency: calculateConsistency(wpmHistory),
+    words: session.words,
+    currentWordIndex: session.currentWordIndex,
+    currentCharIndex: session.currentCharIndex,
+    status: session.status,
+    currentWPM: session.currentWPM,
+    errors: session.errors,
+    keystrokes: session.keystrokes,
+    wpmHistory: session.wpmHistory,
+    accuracy: calculateAccuracy(correctChars, session.keystrokes.length),
+    consistency: calculateConsistency(session.wpmHistory),
     reset,
     endTest
   };

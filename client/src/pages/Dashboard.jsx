@@ -18,12 +18,16 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (userId) {
-      fetch(`http://localhost:4000/api/users/${userId}/stats`)
+      fetch(`http://localhost:4000/api/users/${userId}/stats`, {
+        credentials: 'include'
+      })
         .then(res => res.json())
         .then(data => setStats(data))
         .catch(err => console.error('Failed to fetch stats:', err));
 
-      fetch(`http://localhost:4000/api/users/${userId}/heatmap`)
+      fetch(`http://localhost:4000/api/users/${userId}/heatmap`, {
+        credentials: 'include'
+      })
         .then(res => res.json())
         .then(data => setHeatmap(data))
         .catch(err => console.error('Failed to fetch heatmap:', err));
@@ -176,7 +180,7 @@ const Dashboard = () => {
             <div className="space-y-4 pt-4 border-t border-white/5">
               <h4 className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">Recent_Combat_Logs</h4>
               <div className="flex flex-col gap-3">
-                {stats.recentRaces.length > 0 ? (
+                {stats?.recentRaces?.length > 0 ? (
                   stats.recentRaces.map(race => (
                     <div key={race.id} className="flex items-center justify-between p-3 bg-white/5 border border-white/5 rounded-lg hover:border-primary/20 transition-colors">
                       <div className="flex flex-col">

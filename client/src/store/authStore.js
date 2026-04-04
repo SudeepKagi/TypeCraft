@@ -1,54 +1,69 @@
 import { create } from 'zustand';
 
-const useAuthStore = create((set) => ({
-  user: {
-    username: 'Felix',
-    xp: 0,
-    level: 1,
-    avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBZ0W1Eu5kYb_wSF6r1wIkrFiUxQmRejb69GYue00jgc1ht5B5fIbNoBaHl2s_wb1Pa6WhRxReNFbDFwg4Ndw1NMOt6nNcseuL47rWgigH14PXBv08iZzmNy9EZWcbBYzm2fhMUCfZkcPJrvK5aK3YVU6zjRmLXT0umFYfH4ydlKO7gS8hod2lEJTfL5mVSGJmjkJgs5DIpt5fbmcJpWHBmgDecMxwfX8BS3rJYtxvaMQLdwJnAjUDhLFMmV7ppClPQouGk1ypuJLw',
-  },
+const useAuthStore = create((set, get) => ({
+  user: null,
   userId: null,
-  login: (user, token) => set({ user, token, isAuthenticated: true }),
-  logout: () => set({ user: null, token: null, isAuthenticated: false }),
+  isAuthenticated: false,
+  isInitialized: false,
+  onboardingCompleted: false,
+
   setUserId: (id) => set({ userId: id }),
 
-  addXP: (amount) => set((state) => {
-    const newXP = state.user.xp + amount;
+  addXP: (amount) => {
+    const { user } = get();
+    if (!user) return;
+    
+    const newXP = (user.xp || 0) + amount;
     const newLevel = Math.floor(Math.sqrt(newXP / 50)) + 1;
-    return { 
-      user: { ...state.user, xp: newXP, level: newLevel }
-    };
-  }),
+    set({ 
+      user: { ...user, xp: newXP, level: newLevel }
+    });
+  },
 
-  syncUser: async () => {
+  initializeAuth: async () => {
     try {
-      const auth = useAuthStore.getState();
-      if (!auth.user) return;
-
-      const response = await fetch('http://localhost:4000/api/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          username: auth.user.username,
-          email: `${auth.user.username.toLowerCase()}@typecraft.io`,
-          avatarUrl: auth.user.avatarUrl
-        })
+      const res = await fetch('http://localhost:4000/auth/me', {
+        credentials: 'include'
       });
-
-      if (response.ok) {
-        const data = await response.json();
+      const data = await res.json();
+      if (data.authenticated) {
         set({ 
-            userId: data.id,
-            user: { 
-                ...auth.user, 
-                xp: data.xp || 0,
-                level: Math.floor(Math.sqrt((data.xp || 0) / 50)) + 1
-            }
+          user: data.user, 
+          isAuthenticated: true, 
+          userId: data.user.id,
+          onboardingCompleted: data.onboardingCompleted 
         });
+      } else {
+        set({ user: null, isAuthenticated: false, userId: null, onboardingCompleted: false });
       }
-    } catch (error) {
-      console.error('Failed to sync user with DB:', error);
+    } catch (err) {
+      console.error('Auth initialization failed:', err);
+    } finally {
+      set({ isInitialized: true });
     }
+  },
+
+  completeOnboarding: (userData) => {
+    set({ user: userData, onboardingCompleted: true });
+  },
+
+  logout: async () => {
+    try {
+      await fetch('http://localhost:4000/auth/logout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
+      set({ user: null, userId: null, isAuthenticated: false });
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
+  },
+
+  // Kept for backward compatibility but redirected to re-fetch me
+  syncUser: async () => {
+    const { initializeAuth } = get();
+    await initializeAuth();
   }
 }));
 

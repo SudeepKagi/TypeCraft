@@ -3,6 +3,8 @@ const express = require('express');
 const http = require('http');
 const { Server } = require('socket.io');
 const cors = require('cors');
+const session = require('express-session');
+const passport = require('passport');
 const { PrismaClient } = require('@prisma/client');
 const raceHandler = require('./src/handlers/raceHandler');
 
@@ -17,13 +19,70 @@ const io = new Server(server, {
 
 const prisma = new PrismaClient();
 
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173',
+  credentials: true
+}));
 app.use(express.json());
 
 // Pass prisma to requests
 app.use((req, res, next) => {
   req.prisma = prisma;
   next();
+});
+
+// Configure Sessions
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'fallback-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Use 'lax' for local dev to avoid secure requirements
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// Initialize Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Mount Routes
+const authRoutes = require('./src/routes/auth')(prisma);
+app.use('/auth', authRoutes);
+
+// Consolidation: /auth/me is handled by the auth routes router.
+// Removing redundant index-level listener to prevent conflicts.
+
+// Complete Onboarding
+app.post('/api/user/onboarding', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  
+  const { username, avatarId, avatarUrl } = req.body;
+  
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        username: username || req.user.username,
+        avatarId: avatarId || req.user.avatarId,
+        avatarUrl: avatarUrl || req.user.avatarUrl,
+        onboardingCompleted: true
+      }
+    });
+
+    // Update session user
+    req.login(updatedUser, (err) => {
+      if (err) return res.status(500).json({ error: 'Session update failed' });
+      res.json({ success: true, user: updatedUser });
+    });
+  } catch (error) {
+    console.error('Onboarding Error:', error);
+    if (error.code === 'P2002') {
+       return res.status(400).json({ error: 'Username already taken' });
+    }
+    res.status(500).json({ error: 'Failed to complete onboarding' });
+  }
 });
 
 // REST Endpoints
@@ -100,8 +159,9 @@ app.post('/api/results', async (req, res) => {
     }
 
     // Calculate XP: (WPM * Accuracy / 100) * (ChallengeDuration / 60)
-    // Ensures scaling by time commitment
-    const rawXp = parseFloat(wpm) * (parseFloat(accuracy) / 100) * (challengeDuration / 60);
+    // Trainer passages are shorter, so we treat them as fixed 30s effort for XP purposes if duration not provided
+    const weightFactor = mode === 'trainer' ? 0.5 : (challengeDuration / 60);
+    const rawXp = parseFloat(wpm) * (parseFloat(accuracy) / 100) * weightFactor;
     const xpGained = Math.max(1, Math.floor(rawXp));
     
     const updatedUser = await prisma.user.update({
@@ -135,7 +195,8 @@ app.get('/api/users/:userId/stats', async (req, res) => {
         avgWpm: 0,
         totalTests: 0,
         momentum: [],
-        recentAccuracy: 0
+        recentAccuracy: 0,
+        recentRaces: []
       });
     }
 
@@ -232,30 +293,6 @@ app.get('/api/leaderboard', async (req, res) => {
         accuracy: topResult ? topResult.accuracy : 0
       };
     }).filter(user => user.wpm > 0).sort((a, b) => b.wpm - a.wpm);
-
-    // Provide mock fallback data if database is mostly empty to fulfill UI requirements
-    if (leaderboard.length < 5) {
-      const mockData = [
-        { id: 'm1', username: 'HyperSonic_', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCWBSuaIIgm_sPVUllnU5ON9_g22_LkjIx3A6RZNMsZ0iSiXCd3_i4Aym-0xhlKj02Ls0Zp0cnXykQVeXmpmfFj__z8duO2MpdKAaZeZGTyEQOj-ip2zRybFLinQp6mQB44-gjQfVrIWqdknNe60FCvFUC8Jyey5B64gbz6DgDXe4u9u_MApR4zR0ISsnI9A8geUcCr4xNWldCydyBa6ZxeFBcgWBuYNjeKSDlitECd-M2NPbCnuZdFjQDNFvnKbGsUGpiWp4-frRA', wpm: 184, tests: 4210, accuracy: 99.2 },
-        { id: 'm2', username: 'GhostCode', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBsblPZfb9EkZbrtDAssLzmvlcn3SVAeiNqmMyjpRrfuc2QMkki8R8JIloVtwE0F5gamgAug0-VwwBBNbEZzyjg4ZaPygl0bUYhJD7_XkfRz79eTP-tvncL3bUXRy1rd6SpX-VDj7KUWi8fZGGsJNDo5Dw9x8_p9Il5xHuDOh8U_PZD23j2C6px5x5EUdoX2xh0MV7PH15l-qtvOEehYsBdUFRcKXW3gOWpxw7tHv2Fo6LOqZOF2sha8f2TF1RPcg05cSmL7XYE9cg', wpm: 179, tests: 12842, accuracy: 98.8 },
-        { id: 'm3', username: 'VortexTyper', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBUebAcLulvrxovVSS3YMquKLO3DkujGAbJ9-jzTTmZj5DIgAAf8LEpGvEQbp2cwHB9Gos7aLb5ZVHhVMUqiGidaE8As80Cy24S4qMaqOBcyt2aH2bDODH1qHpbpNj-r2EPtDQr43nySzvks-SEmD0gDwnVcjBW7ftGA3gSRU6Ipg-6-maHOwtn3NoO5SvU67fQI2UCFR9PDdYC4ymPDz05XZPC9iB0h4fo00vhCAAlKliX1pJjn5vaqYpgDDHOE9hSdSi1CNARMfo', wpm: 175, tests: 809, accuracy: 97.5 },
-        { id: 'm4', username: 'NovaPulse', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCWBSuaIIgm_sPVUllnU5ON9_g22_LkjIx3A6RZNMsZ0iSiXCd3_i4Aym-0xhlKj02Ls0Zp0cnXykQVeXmpmfFj__z8duO2MpdKAaZeZGTyEQOj-ip2zRybFLinQp6mQB44-gjQfVrIWqdknNe60FCvFUC8Jyey5B64gbz6DgDXe4u9u_MApR4zR0ISsnI9A8geUcCr4xNWldCydyBa6ZxeFBcgWBuYNjeKSDlitECd-M2NPbCnuZdFjQDNFvnKbGsUGpiWp4-frRA', wpm: 168, tests: 562, accuracy: 99.1 },
-        { id: 'm5', username: 'Shift_Key', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBsblPZfb9EkZbrtDAssLzmvlcn3SVAeiNqmMyjpRrfuc2QMkki8R8JIloVtwE0F5gamgAug0-VwwBBNbEZzyjg4ZaPygl0bUYhJD7_XkfRz79eTP-tvncL3bUXRy1rd6SpX-VDj7KUWi8fZGGsJNDo5Dw9x8_p9Il5xHuDOh8U_PZD23j2C6px5x5EUdoX2xh0MV7PH15l-qtvOEehYsBdUFRcKXW3gOWpxw7tHv2Fo6LOqZOF2sha8f2TF1RPcg05cSmL7XYE9cg', wpm: 164, tests: 2104, accuracy: 96.4 },
-        { id: 'm6', username: 'PixelPusher', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBUebAcLulvrxovVSS3YMquKLO3DkujGAbJ9-jzTTmZj5DIgAAf8LEpGvEQbp2cwHB9Gos7aLb5ZVHhVMUqiGidaE8As80Cy24S4qMaqOBcyt2aH2bDODH1qHpbpNj-r2EPtDQr43nySzvks-SEmD0gDwnVcjBW7ftGA3gSRU6Ipg-6-maHOwtn3NoO5SvU67fQI2UCFR9PDdYC4ymPDz05XZPC9iB0h4fo00vhCAAlKliX1pJjn5vaqYpgDDHOE9hSdSi1CNARMfo', wpm: 162, tests: 7549, accuracy: 88.2 },
-        { id: 'm7', username: 'EchoLogic', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCWBSuaIIgm_sPVUllnU5ON9_g22_LkjIx3A6RZNMsZ0iSiXCd3_i4Aym-0xhlKj02Ls0Zp0cnXykQVeXmpmfFj__z8duO2MpdKAaZeZGTyEQOj-ip2zRybFLinQp6mQB44-gjQfVrIWqdknNe60FCvFUC8Jyey5B64gbz6DgDXe4u9u_MApR4zR0ISsnI9A8geUcCr4xNWldCydyBa6ZxeFBcgWBuYNjeKSDlitECd-M2NPbCnuZdFjQDNFvnKbGsUGpiWp4-frRA', wpm: 159, tests: 449, accuracy: 85.9 },
-        { id: 'm8', username: 'Shadow_Step', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBsblPZfb9EkZbrtDAssLzmvlcn3SVAeiNqmMyjpRrfuc2QMkki8R8JIloVtwE0F5gamgAug0-VwwBBNbEZzyjg4ZaPygl0bUYhJD7_XkfRz79eTP-tvncL3bUXRy1rd6SpX-VDj7KUWi8fZGGsJNDo5Dw9x8_p9Il5xHuDOh8U_PZD23j2C6px5x5EUdoX2xh0MV7PH15l-qtvOEehYsBdUFRcKXW3gOWpxw7tHv2Fo6LOqZOF2sha8f2TF1RPcg05cSmL7XYE9cg', wpm: 155, tests: 3201, accuracy: 87.0 },
-        { id: 'm9', username: 'DraftMaster', avatarUrl: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBUebAcLulvrxovVSS3YMquKLO3DkujGAbJ9-jzTTmZj5DIgAAf8LEpGvEQbp2cwHB9Gos7aLb5ZVHhVMUqiGidaE8As80Cy24S4qMaqOBcyt2aH2bDODH1qHpbpNj-r2EPtDQr43nySzvks-SEmD0gDwnVcjBW7ftGA3gSRU6Ipg-6-maHOwtn3NoO5SvU67fQI2UCFR9PDdYC4ymPDz05XZPC9iB0h4fo00vhCAAlKliX1pJjn5vaqYpgDDHOE9hSdSi1CNARMfo', wpm: 154, tests: 9122, accuracy: 89.0 },
-      ];
-      
-      // Inject DB users into mockdata if they exist
-      leaderboard.forEach(dbUser => {
-        if (!mockData.find(m => m.id === dbUser.id || m.username === dbUser.username)) {
-          mockData.push(dbUser);
-        }
-      });
-      leaderboard = mockData.sort((a,b) => b.wpm - a.wpm);
-    }
-
     res.json(leaderboard);
   } catch (error) {
     console.error('[Leaderboard Error]', error);
@@ -263,38 +300,106 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 });
 
+const validateSaturation = (passage, weakness) => {
+  if (!passage || !weakness) return false;
+  // Normalize weakness to a set of characters
+  const targetChars = weakness.toLowerCase().replace(/[\s,]/g, '').split('');
+  if (targetChars.length === 0) return true; // No weakness provided, technically saturated
+  
+  const words = passage.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+  return words.every(word => targetChars.some(char => word.includes(char)));
+};
+
+const LOCAL_DICTIONARY = {
+  'q': ["quick", "query", "unique", "opaque", "squat", "liquid", "quest", "quack", "quality", "squeak"],
+  'z': ["zone", "blaze", "jazz", "zero", "gaze", "buzz", "maze", "size", "azure", "wizard"],
+  'x': ["extra", "axle", "next", "fix", "oxygen", "hex", "box", "apex", "index", "pixel"],
+  'j': ["jump", "just", "joint", "judge", "major", "object", "project", "enjoy", "adjunct", "jacket"],
+  'v': ["video", "vital", "voice", "vivid", "vector", "valve", "vault", "evolve", "vocal", "vortex"],
+  'k': ["key", "kind", "keep", "known", "break", "click", "check", "speak", "skate", "krill"],
+  'w': ["word", "work", "wait", "west", "swing", "swim", "write", "wave", "wrench", "wrist"],
+  ';': ["code;", "logic;", "syntax;", "yield;", "await;", "return;", "const;", "let;", "if;", "while;"],
+  '[': ["arr[i]", "data[0]", "list[n]", "val[x]", "map[k]", "set[v]", "box[y]", "bit[z]", "obj[p]", "key[s]"],
+  ']': ["arr[0]", "map[x]", "list[i]", "data[z]", "set[k]", "val[y]", "bit[p]", "box[s]", "obj[v]", "key[n]"]
+};
+
+// Generates a passage locally if AI fails, ensuring 100% saturation
+const generateLocalSaturatedPassage = (weakness) => {
+  const chars = weakness.toLowerCase().replace(/[\s,]/g, '').split('');
+  if (chars.length === 0) return { passage: "Type the characters correctly to improve your precision.", insights: "Standard calibration mode initialized." };
+  
+  let passageRaw = [];
+  for (let i = 0; i < 20; i++) {
+    const targetChar = chars[i % chars.length];
+    const choices = LOCAL_DICTIONARY[targetChar] || ["sync", "link", "node", "core", targetChar + " " + targetChar];
+    const word = choices[Math.floor(Math.random() * choices.length)];
+    passageRaw.push(word);
+  }
+  
+  // Shuffle slightly
+  const passage = passageRaw.sort(() => Math.random() - 0.5).join(' ');
+  return {
+    passage,
+    insights: `Local saturation backup engaged for [ ${weakness} ]. Direct hardware override providing 100% targeted protocol.`
+  };
+};
+
 app.post('/api/ai/train', async (req, res) => {
   const { weakness } = req.body;
   try {
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }); // Corrected to 1.5-flash
+    const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // Upgraded to 2.0-flash
     const prompt = `Generate a JSON object for a typing practice session targeting these characters: "${weakness}".
-    Include:
-    1. "passage": A 50-word text focusing heavily on those characters.
-    2. "insights": A short (1 sentence) technical explanation of why this passage helps muscle memory for these keys.
-    Return ONLY JSON.`;
+    GOAL: Create a training passage where EVERY WORD contains at least one of these characters: "${weakness}".
     
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const rawText = response.text().trim();
+    Strict Rules:
+    1. 100% Saturation: Every single word in the "passage" field MUST contain at least one of: ${weakness}.
+    2. Length: 20-30 words (prefer quality and saturation over length).
+    3. Style: Technical, cyber-industrial, elite operator tone.
+    4. Format: Return ONLY a JSON object with "passage" and "insights" strings.
+
+    Example for 'q': "quick query unique opaque squat liquid quest..."
+    Example for 'z': "zone blaze jazz zero gaze buzz maze size..."
+
+    JSON Structure:
+    { "passage": "...", "insights": "..." }`;
     
-    // Robust JSON extraction to handle Gemini's optional markdown or extra text
     let data;
-    try {
-      const jsonMatch = rawText.match(/\{[\s\S]*\}/);
-      data = jsonMatch ? JSON.parse(jsonMatch[0]) : JSON.parse(rawText);
-    } catch (e) {
-      console.warn('[AI Parse Warning] Trying secondary fallback');
-      throw new Error('Malformed AI JSON');
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    while (attempts < maxAttempts) {
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const rawText = response.text().trim();
+      
+      try {
+        const firstBrace = rawText.indexOf('{');
+        const lastBrace = rawText.lastIndexOf('}');
+        if (firstBrace !== -1 && lastBrace !== -1) {
+          data = JSON.parse(rawText.substring(firstBrace, lastBrace + 1));
+          
+          if (validateSaturation(data.passage, weakness)) {
+            console.log(`[AI Trainer] Saturation validated on attempt ${attempts + 1}`);
+            break; 
+          } else {
+            console.warn(`[AI Trainer] Saturation failed on attempt ${attempts + 1}. Retrying...`);
+          }
+        }
+      } catch (e) {
+        console.warn(`[AI Trainer] Parse error on attempt ${attempts + 1}: ${e.message}`);
+      }
+      attempts++;
+    }
+
+    if (!data || !validateSaturation(data.passage, weakness)) {
+      throw new Error('Failed to generate saturated passage after multiple attempts');
     }
     
     res.json(data);
   } catch (error) {
-    console.error('[Train Error]', error.message);
-    const fallback = {
-      passage: `Focus entirely on your targeted keys: ${weakness}. Repetition builds pathways. Mastering ${weakness} requires patience. Execute precision strokes on ${weakness} until muscle memory solidifies completely without hesitation or error.`,
-      insights: `Standard rhythmic repetition protocol initialized for ${weakness}.`
-    };
-    res.json(fallback);
+    console.warn('[AI Trainer] Gemini failed:', error.message);
+    const localResult = generateLocalSaturatedPassage(weakness);
+    res.json(localResult);
   }
 });
 

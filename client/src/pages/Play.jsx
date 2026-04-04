@@ -5,6 +5,65 @@ import { useTyping } from '../hooks/useTyping';
 import useAuthStore from '../store/authStore';
 import { generatePassage } from '../lib/contentLibrary';
 
+const ResultsOverlay = ({ wpm, accuracy, xp, onRestart }) => {
+  useEffect(() => {
+    const handleKey = (e) => {
+       if (e.key === 'Enter' || e.key === 'Escape') {
+         onRestart();
+       }
+    };
+    window.addEventListener('keydown', handleKey);
+    return () => window.removeEventListener('keydown', handleKey);
+  }, [onRestart]);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-xl animate-fade-in px-4">
+       <div className="max-w-xl w-full p-8 md:p-12 custom-glass border border-primary/20 rounded-3xl text-center shadow-teal-glow relative overflow-hidden">
+          {/* Background Glow Decoration */}
+          <div className="absolute top-[-100px] left-[-100px] w-64 h-64 bg-primary/10 blur-[100px] rounded-full" />
+          <div className="absolute bottom-[-100px] right-[-100px] w-64 h-64 bg-primary/10 blur-[100px] rounded-full" />
+
+          <h2 className="font-syne font-black text-5xl md:text-6xl text-neutral-100 tracking-tighter mb-4 relative z-10">TOTAL_SYNC</h2>
+          <div className="w-12 h-1 bg-primary mx-auto mb-10 relative z-10" />
+          
+          <div className="grid grid-cols-2 gap-8 md:gap-12 mb-12 relative z-10">
+             <div className="flex flex-col gap-2">
+                <span className="text-6xl md:text-7xl font-syne font-black text-primary">{wpm}</span>
+                <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest">WPM_PERFORMANCE</span>
+             </div>
+             <div className="flex flex-col gap-2">
+                <span className="text-6xl md:text-7xl font-syne font-black text-neutral-100">{accuracy}<span className="text-3xl text-neutral-600">%</span></span>
+                <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest">PRECISION_STABILITY</span>
+             </div>
+          </div>
+
+          <div className="bg-primary/5 border border-primary/10 rounded-2xl p-6 mb-10 flex items-center justify-between relative z-10">
+             <div className="flex items-center gap-4">
+                <span className="material-symbols-outlined text-primary text-[28px]">bolt</span>
+                <div className="text-left">
+                   <h3 className="text-[10px] font-mono text-primary font-bold uppercase tracking-[0.2em]">Neural Gain</h3>
+                   <p className="text-[10px] font-inter text-neutral-500 italic uppercase">Connection strengthened.</p>
+                </div>
+             </div>
+             <span className="text-3xl md:text-4xl font-syne font-black text-primary animate-pulse tracking-tighter">+{xp} XP</span>
+          </div>
+
+          <div className="flex flex-col items-center gap-4 relative z-10">
+             <button 
+                onClick={onRestart}
+                className="w-full py-5 bg-primary text-on-primary font-syne font-black text-xl rounded-xl hover:bg-emerald-400 transition-all shadow-teal-glow group active:scale-95"
+             >
+                FORCE_REBOOT
+             </button>
+             <div className="flex items-center gap-4 text-[10px] font-mono text-neutral-500 uppercase tracking-[0.3em] opacity-40">
+                <span className="bg-neutral-800 px-2 py-1 rounded border border-white/10 uppercase">Press Enter to Start New Test</span>
+             </div>
+          </div>
+       </div>
+    </div>
+  );
+};
+
 const Play = () => {
   const [selectedMode, setSelectedMode] = useState('words');
   const [selectedDuration, setSelectedDuration] = useState(60);
@@ -89,17 +148,6 @@ const Play = () => {
       .catch(err => console.error('Failed to save solo result:', err));
     }
   }, [status, userId, currentWPM, accuracy, timeLeft, addXP, selectedDuration, selectedMode]);
-
-  // Auto-refresh logic (5-second window to view stats)
-  useEffect(() => {
-    let refreshTimer;
-    if (status === 'finished') {
-       refreshTimer = setTimeout(() => {
-         handleRestart();
-       }, 5000); 
-    }
-    return () => clearTimeout(refreshTimer);
-  }, [status, handleRestart]);
 
   // Restart shortcut
   useEffect(() => {
@@ -206,6 +254,16 @@ const Play = () => {
             <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">Potential_XP</span>
           </div>
         </div>
+
+        {/* Results Screen */}
+        {status === 'finished' && (
+          <ResultsOverlay 
+            wpm={currentWPM}
+            accuracy={accuracy}
+            xp={potentialXp}
+            onRestart={() => handleRestart()}
+          />
+        )}
 
         {/* Keyboard Shortcut Hint */}
         <div className="mt-20 group cursor-pointer flex items-center gap-4 text-[10px] font-mono text-neutral-500 hover:text-neutral-300 transition-colors uppercase tracking-widest" onClick={() => handleRestart()}>

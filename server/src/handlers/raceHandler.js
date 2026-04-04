@@ -1,3 +1,4 @@
+const { generateRacePassage } = require('../data/passages');
 const rooms = {};
 
 const generateRoomCode = () => {
@@ -91,7 +92,9 @@ const raceHandler = (io, socket, prisma) => {
           clearInterval(interval);
           room.status = 'racing';
           room.startTime = Date.now();
-          io.to(roomCode).emit('race:started', { startTime: room.startTime });
+          const passage = generateRacePassage('quotes', 35); // Default quotes for races
+          room.passage = passage;
+          io.to(roomCode).emit('race:started', { startTime: room.startTime, passage: room.passage });
         }
       }, 1000);
     }

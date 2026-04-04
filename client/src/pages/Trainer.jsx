@@ -10,6 +10,7 @@ const Trainer = () => {
   const [insights, setInsights] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [isSaturated, setIsSaturated] = useState(false);
   const userId = useAuthStore(state => state.userId);
 
   const { 
@@ -60,12 +61,46 @@ const Trainer = () => {
       
       setPassage(data.passage.trim());
       setInsights(data.insights);
+
+      // Perform local saturation check for UI feedback
+      const targetChars = weakness.toLowerCase().replace(/[\s,]/g, '').split('');
+      const wordsLower = data.passage.toLowerCase().split(/\s+/).filter(w => w.length > 0);
+      const saturated = wordsLower.every(word => targetChars.some(char => word.includes(char)));
+      setIsSaturated(saturated);
+
       reset(data.passage.trim()); // explicitly reset the typing hook
     } catch (err) {
       setError("AI Generation failed. Check local GEMINI_API_KEY in server/.env");
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleNeuralSync = async () => {
+     if (!userId) return;
+     setLoading(true);
+     try {
+        const response = await fetch(`http://localhost:4000/api/users/${userId}/heatmap`);
+        const data = await response.json();
+        
+        // Identify characters with < 90% accuracy, sorted by lowest accuracy
+        const weaknesses = Object.entries(data)
+          .filter(([char, stats]) => stats.accuracy < 90 && stats.total > 10)
+          .sort((a, b) => a[1].accuracy - b[1].accuracy)
+          .slice(0, 5)
+          .map(([char]) => char)
+          .join(' ');
+          
+        if (weaknesses) {
+           setWeakness(weaknesses);
+        } else {
+           setError("No significant weaknesses detected. Keep racing!");
+        }
+     } catch (err) {
+        console.error('Neural Sync failed:', err);
+     } finally {
+        setLoading(false);
+     }
   };
 
   const isRacing = status === 'running' || status === 'finished';
@@ -92,16 +127,25 @@ const Trainer = () => {
             <div className="space-y-6 flex flex-col">
                <div className="space-y-2">
                  <label className="text-xs text-neutral-400 font-mono">Problematic Characters (e.g., "; q z [ ]")</label>
-                 <input 
-                    type="text" 
-                    value={weakness}
-                    onChange={(e) => setWeakness(e.target.value)}
-                    placeholder="Enter characters to practice..."
-                    className="w-full bg-neutral-950 border border-neutral-800 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-neutral-200 font-mono text-sm tracking-widest outline-none transition-all"
-                    onKeyDown={(e) => {
-                       if (e.key === 'Enter') handleGenerate();
-                    }}
-                 />
+                  <div className="flex gap-2">
+                    <input 
+                       type="text" 
+                       value={weakness}
+                       onChange={(e) => setWeakness(e.target.value)}
+                       placeholder="Enter characters to practice..."
+                       className="flex-1 bg-neutral-950 border border-neutral-800 focus:border-primary focus:ring-1 focus:ring-primary rounded-lg px-4 py-3 text-neutral-200 font-mono text-sm tracking-widest outline-none transition-all"
+                       onKeyDown={(e) => {
+                          if (e.key === 'Enter') handleGenerate();
+                       }}
+                    />
+                    <button 
+                      onClick={handleNeuralSync}
+                      className="px-4 rounded-lg bg-neutral-800 border border-white/5 text-primary hover:bg-neutral-700 transition-colors flex items-center justify-center group"
+                      title="Sync Neural Data"
+                    >
+                      <span className="material-symbols-outlined text-[18px] group-hover:rotate-180 transition-transform duration-500">neurology</span>
+                    </button>
+                  </div>
                </div>
 
                <button 
@@ -136,18 +180,27 @@ const Trainer = () => {
                    <span className="font-mono text-xs text-primary font-bold tracking-widest uppercase">Targeted Phase</span>
                 </div>
                 
-                {status !== 'idle' && (
-                  <div className="flex gap-8">
-                     <div className="flex flex-col items-end">
-                       <span className="text-[10px] text-neutral-500 font-inter uppercase tracking-widest">WPM</span>
-                       <span className="font-syne font-black text-2xl text-primary">{Math.floor(currentWPM)}</span>
-                     </div>
-                     <div className="flex flex-col items-end">
-                       <span className="text-[10px] text-neutral-500 font-inter uppercase tracking-widest">Accuracy</span>
-                       <span className="font-syne font-black text-2xl text-neutral-100">{accuracy.toFixed(1)}%</span>
-                     </div>
-                  </div>
-                )}
+                <div className="flex gap-8">
+                   <div className="flex flex-col items-end">
+                     <span className="text-[10px] text-neutral-500 font-inter uppercase tracking-widest text-right w-full">Saturation</span>
+                     <span className={`font-mono text-xs font-bold leading-7 ${isSaturated ? 'text-primary' : 'text-yellow-500'}`}>
+                       {isSaturated ? '100% TARGETED' : 'PARTIAL SYNC'}
+                     </span>
+                   </div>
+                   
+                   {status !== 'idle' && (
+                     <>
+                       <div className="flex flex-col items-end">
+                         <span className="text-[10px] text-neutral-500 font-inter uppercase tracking-widest">WPM</span>
+                         <span className="font-syne font-black text-2xl text-primary">{Math.floor(currentWPM)}</span>
+                       </div>
+                       <div className="flex flex-col items-end">
+                         <span className="text-[10px] text-neutral-500 font-inter uppercase tracking-widest">Accuracy</span>
+                         <span className="font-syne font-black text-2xl text-neutral-100">{accuracy.toFixed(1)}%</span>
+                       </div>
+                     </>
+                   )}
+                </div>
              </div>
 
              {/* Typing Component */}

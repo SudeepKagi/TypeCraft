@@ -5,17 +5,20 @@ import { useTyping } from '../hooks/useTyping';
 import useAuthStore from '../store/authStore';
 import useRaceStore from '../store/raceStore';
 import socket from '../lib/socket';
+import { calculateRank } from '../lib/rankCalc';
+import RaceResultsOverlay from '../components/typing/RaceResultsOverlay';
 
 const samplePassage = "The quick brown fox jumps over the lazy dog. Programming is the art of algorithm design and the craft of debugging code. High performance typing requires absolute focus and rhythmic precision.";
 
 const Race = () => {
   const { user } = useAuthStore();
   const { players, status, roomCode, GhostRun } = useRaceStore();
+  const [passage, setPassage] = useState("The quick brown fox..."); // Initial fallback
   
   const { 
     words, currentWordIndex, currentCharIndex, currentWPM, 
-    reset, status: typingStatus, accuracy 
-  } = useTyping(samplePassage);
+    reset, status: typingStatus, accuracy, endTest
+  } = useTyping(passage);
 
   const [joinCode, setJoinCode] = useState('');
   const [countdown, setCountdown] = useState(null);
@@ -25,7 +28,10 @@ const Race = () => {
     if (user?.id) {
        fetch(`http://localhost:4000/api/users/${user.id}/stats`)
          .then(res => res.json())
-         .then(data => setStats({ ...data, rank: 'PILOT' })) // Simplified rank for now
+         .then(data => {
+            const rankInfo = calculateRank(data.avgWpm, data.recentAccuracy);
+            setStats({ ...data, rank: rankInfo.name });
+         })
          .catch(err => console.error(err));
     }
   }, [user?.id]);
@@ -46,10 +52,15 @@ const Race = () => {
       setCountdown(count);
     });
     
-    socket.on('race:started', () => {
+    socket.on('race:started', ({ passage: serverPassage }) => {
       useRaceStore.getState().setStatus('racing');
       setCountdown(null);
-      reset(samplePassage); // reset typing hook
+      if (serverPassage) {
+        setPassage(serverPassage);
+        reset(serverPassage);
+      } else {
+        reset(passage);
+      }
       
       // Dispatch dummy keystroke to trigger 'running' state in useTyping hook
       setTimeout(() => {
@@ -73,6 +84,14 @@ const Race = () => {
       socket.emit('race:progress', { roomCode, progress: completionPercent, wpm: currentWPM, accuracy });
     }
   }, [currentWordIndex, currentWPM, status, roomCode, words.length, accuracy]);
+
+  // Handle local finish
+  useEffect(() => {
+    if (status === 'racing' && currentWordIndex === words.length && words.length > 0) {
+      endTest();
+    }
+  }, [currentWordIndex, words.length, status, endTest]);
+
   const isTimeWarpActive = status === 'racing' && currentWPM > 100;
 
 
@@ -113,27 +132,27 @@ const Race = () => {
           
           <div className={`flex items-center justify-between p-4 rounded-lg border transition-all duration-500 ${isTimeWarpActive ? 'bg-primary/10 border-primary shadow-glow-primary' : 'bg-neutral-900/50 border-neutral-800/50'}`}>
             <div className="flex items-center gap-6">
-              <div class="flex items-center gap-2">
-                <span class={`flex h-2 w-2 rounded-full animate-pulse ${isTimeWarpActive ? 'bg-primary' : 'bg-red-500'}`}></span>
-                <span class={`text-xs font-bold tracking-widest ${isTimeWarpActive ? 'text-primary' : 'text-red-500'}`}>LIVE</span>
+              <div className="flex items-center gap-2">
+                <span className={`flex h-2 w-2 rounded-full animate-pulse ${isTimeWarpActive ? 'bg-primary' : 'bg-red-500'}`}></span>
+                <span className={`text-xs font-bold tracking-widest ${isTimeWarpActive ? 'text-primary' : 'text-red-500'}`}>LIVE</span>
               </div>
-              <div class="flex flex-col">
-                <span class="text-[10px] text-neutral-500 font-inter uppercase tracking-tighter">Room Code</span>
-                <span class="text-sm font-mono text-neutral-200">#{roomCode || 'NONE'}</span>
+              <div className="flex flex-col">
+                <span className="text-[10px] text-neutral-500 font-inter uppercase tracking-tighter">Room Code</span>
+                <span className="text-sm font-mono text-neutral-200">#{roomCode || 'NONE'}</span>
               </div>
             </div>
-            <div class="flex gap-12">
-              <div class="text-center">
-                <span class="block text-[10px] text-neutral-500 font-inter uppercase">Time</span>
-                <span class="text-xl font-syne text-neutral-100 italic">00:42.12</span>
+            <div className="flex gap-12">
+              <div className="text-center">
+                <span className="block text-[10px] text-neutral-500 font-inter uppercase">Time</span>
+                <span className="text-xl font-syne text-neutral-100 italic">00:42.12</span>
               </div>
-              <div class="text-center">
-                <span class="block text-[10px] text-neutral-500 font-inter uppercase">WPM</span>
+              <div className="text-center">
+                <span className="block text-[10px] text-neutral-500 font-inter uppercase">WPM</span>
                 <span className={`text-xl font-syne transition-colors ${isTimeWarpActive ? 'text-white' : 'text-primary'}`}>{Math.floor(currentWPM)}</span>
               </div>
-              <div class="text-center">
-                <span class="block text-[10px] text-neutral-500 font-inter uppercase">ACC</span>
-                <span class="text-xl font-syne text-neutral-100">{accuracy.toFixed(0)}%</span>
+              <div className="text-center">
+                <span className="block text-[10px] text-neutral-500 font-inter uppercase">ACC</span>
+                <span className="text-xl font-syne text-neutral-100">{accuracy.toFixed(0)}%</span>
               </div>
             </div>
           </div>
@@ -150,33 +169,33 @@ const Race = () => {
           </div>
 
           {/* Race Track Lanes */}
-          <div class="flex flex-col gap-2 mt-4">
+          <div className="flex flex-col gap-2 mt-4">
             
             {/* Ghost Lane */}
-            <div class="relative h-12 flex items-center px-4 border border-dashed border-neutral-800 rounded-lg bg-neutral-950/20 opacity-60">
-              <div class="flex items-center gap-3 z-10 w-40 shrink-0">
-                <div class="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center border border-neutral-700">
-                  <span class="material-symbols-outlined text-xs text-neutral-500">mist</span>
+            <div className="relative h-12 flex items-center px-4 border border-dashed border-neutral-800 rounded-lg bg-neutral-950/20 opacity-60">
+              <div className="flex items-center gap-3 z-10 w-40 shrink-0">
+                <div className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center border border-neutral-700">
+                  <span className="material-symbols-outlined text-xs text-neutral-500">mist</span>
                 </div>
-                <span class="text-xs font-inter text-neutral-400">Ghost (Best)</span>
+                <span className="text-xs font-inter text-neutral-400">Ghost (Best)</span>
               </div>
-              <div class="flex-1 h-1 bg-neutral-900 rounded-full overflow-hidden relative">
-                <div class="absolute top-0 left-0 h-full w-[85%] bg-neutral-600 rounded-full transition-all duration-700 ease-out"></div>
+              <div className="flex-1 h-1 bg-neutral-900 rounded-full overflow-hidden relative">
+                <div className="absolute top-0 left-0 h-full w-[85%] bg-neutral-600 rounded-full transition-all duration-700 ease-out"></div>
               </div>
-              <div class="ml-4 text-[10px] font-mono text-neutral-500">128 WPM</div>
+              <div className="ml-4 text-[10px] font-mono text-neutral-500">128 WPM</div>
             </div>
 
             {/* Active Competitors */}
-            <div class="space-y-1">
+            <div className="space-y-1">
               {currentPlayers.map(p => (
                 <div key={p.id} className={`relative h-14 flex items-center px-4 rounded-lg transition-colors ${p.isMe ? 'bg-neutral-900/40 border-l-4 border-primary shadow-teal-glow' : 'hover:bg-neutral-900/20'}`}>
-                  <div class="flex items-center gap-3 z-10 w-40 shrink-0">
+                  <div className="flex items-center gap-3 z-10 w-40 shrink-0">
                     <div className={`w-8 h-8 rounded-full overflow-hidden bg-neutral-800 ${p.isMe ? 'border-2 border-primary' : 'border border-neutral-800'}`}>
-                      <img src={p.avatarUrl} alt={p.username} class="w-full h-full object-cover" />
+                      <img src={p.avatarUrl} alt={p.username} className="w-full h-full object-cover" />
                     </div>
                     <span className={`text-sm font-inter ${p.isMe ? 'font-bold text-neutral-100' : 'text-neutral-400'}`}>{p.isMe ? 'You' : p.username}</span>
                   </div>
-                  <div class="flex-1 h-2 bg-neutral-950 rounded-full overflow-hidden relative">
+                  <div className="flex-1 h-2 bg-neutral-950 rounded-full overflow-hidden relative">
                      <div className={`absolute top-0 left-0 h-full rounded-full transition-all duration-300 ${p.isMe ? 'bg-primary shadow-teal-glow' : 'bg-neutral-500'}`} style={{ width: `${p.progress}%` }}></div>
                   </div>
                   <div className={`ml-4 text-xs font-mono ${p.isMe ? 'font-bold text-primary' : 'text-neutral-400'}`}>{p.wpm} WPM</div>
@@ -187,29 +206,29 @@ const Race = () => {
         </div>
 
         {/* Sidebar / Race Info */}
-        <div class="lg:col-span-4 flex flex-col gap-6">
-          <div class="custom-glass p-6 rounded-xl space-y-6 border border-outline-variant/10">
-            <h3 class="font-syne text-xl text-neutral-100 tracking-tight">Race Dynamics</h3>
-            <div class="space-y-4">
-              <div class="flex justify-between items-end">
-                <span class="text-[10px] uppercase font-inter text-neutral-500 tracking-widest">Global Rank</span>
-                <span class="text-lg font-mono text-neutral-100">{stats.rank}</span>
+        <div className="lg:col-span-4 flex flex-col gap-6">
+          <div className="custom-glass p-6 rounded-xl space-y-6 border border-outline-variant/10">
+            <h3 className="font-syne text-xl text-neutral-100 tracking-tight">Race Dynamics</h3>
+            <div className="space-y-4">
+              <div className="flex justify-between items-end">
+                <span className="text-[10px] uppercase font-inter text-neutral-500 tracking-widest">Global Rank</span>
+                <span className="text-lg font-mono text-neutral-100">{stats.rank}</span>
               </div>
-              <div class="w-full h-[2px] bg-neutral-800">
-                <div class="w-1/3 h-full bg-primary"></div>
+              <div className="w-full h-[2px] bg-neutral-800">
+                <div className="w-1/3 h-full bg-primary"></div>
               </div>
-              <div class="flex justify-between items-end pt-2">
-                <span class="text-[10px] uppercase font-inter text-neutral-500 tracking-widest">Consistency</span>
-                <span class="text-lg font-mono text-primary">{stats.recentAccuracy.toFixed(1)}%</span>
+              <div className="flex justify-between items-end pt-2">
+                <span className="text-[10px] uppercase font-inter text-neutral-500 tracking-widest">Consistency</span>
+                <span className="text-lg font-mono text-primary">{stats.recentAccuracy.toFixed(1)}%</span>
               </div>
             </div>
 
-            <div class="pt-6 border-t border-neutral-800/50">
-              <span class="text-[10px] uppercase font-inter text-neutral-500 tracking-widest block mb-4">Competitors</span>
-              <div class="space-y-3">
+            <div className="pt-6 border-t border-neutral-800/50">
+              <span className="text-[10px] uppercase font-inter text-neutral-500 tracking-widest block mb-4">Competitors</span>
+              <div className="space-y-3">
                  {[...currentPlayers].sort((a,b) => b.wpm - a.wpm).map((p, index) => (
                     <div key={p.id} className={`flex items-center justify-between ${p.isMe ? 'bg-primary/5 py-1 px-2 rounded -mx-2' : ''}`}>
-                      <div class="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         <span className={`text-xs font-mono font-bold ${p.isMe ? 'text-primary' : 'text-neutral-500'}`}>0{index + 1}</span>
                         <span className={`text-sm font-inter ${p.isMe ? 'text-neutral-100 font-bold' : 'text-neutral-300'}`}>{p.isMe ? 'You' : p.username}</span>
                       </div>
@@ -220,14 +239,14 @@ const Race = () => {
             </div>
           </div>
 
-          <div class="relative p-6 bg-neutral-900/30 rounded-xl overflow-hidden border border-neutral-800/30">
-            <span class="material-symbols-outlined absolute -right-4 -bottom-4 text-7xl opacity-[0.03] rotate-12">keyboard</span>
-            <p class="font-inter text-sm text-neutral-500 leading-relaxed italic">
+          <div className="relative p-6 bg-neutral-900/30 rounded-xl overflow-hidden border border-neutral-800/30">
+            <span className="material-symbols-outlined absolute -right-4 -bottom-4 text-7xl opacity-[0.03] rotate-12">keyboard</span>
+            <p className="font-inter text-sm text-neutral-500 leading-relaxed italic">
               "Precision is the byproduct of discipline. In the void of the track, only the rhythm of the keys exists."
             </p>
-            <div class="mt-4 flex items-center gap-2">
-              <span class="w-4 h-[1px] bg-primary/50"></span>
-              <span class="text-[10px] font-mono uppercase text-neutral-400">Elite Protocol</span>
+            <div className="mt-4 flex items-center gap-2">
+              <span className="w-4 h-[1px] bg-primary/50"></span>
+              <span className="text-[10px] font-mono uppercase text-neutral-400">Elite Protocol</span>
             </div>
           </div>
 
@@ -270,6 +289,23 @@ const Race = () => {
             </div>
           )}
         </div>
+
+        {/* Global Results Overlay */}
+        {status === 'finished' && (
+          <RaceResultsOverlay 
+             players={currentPlayers}
+             wpm={currentWPM}
+             accuracy={accuracy}
+             xp={Math.floor(currentWPM * (accuracy / 100))}
+             onReLobby={() => {
+               useRaceStore.getState().setStatus('waiting');
+               reset(passage);
+             }}
+             onExit={() => {
+                window.location.href = '/dashboard';
+             }}
+          />
+        )}
       </main>
     </PageWrapper>
   );

@@ -8,7 +8,7 @@ const Word = ({ word, isCurrent, wordRef, isTimeWarpActive }) => {
       className={`inline-block mr-2 mb-4 transition-all duration-300 ${word.state === 'skipped-with-errors' ? 'underline decoration-error' : ''} ${isTimeWarpActive && isCurrent ? 'scale-110 brightness-125' : ''}`}
     >
       {word.letters.map((l, i) => {
-        let colorClass = 'text-outline-variant';
+        let colorClass = 'text-on-surface-variant';
         if (l.state === 'correct') colorClass = isTimeWarpActive ? 'text-primary drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]' : 'text-on-surface';
         if (l.state === 'incorrect') colorClass = 'text-error';
         
