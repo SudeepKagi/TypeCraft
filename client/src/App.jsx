@@ -24,7 +24,7 @@ const ProtectedRoute = ({ children, requireOnboarding = true }) => {
 
   React.useEffect(() => {
     if (!isAuthenticated && !hasToasted) {
-      addToast('Neural Link Required. Please login to enter this sector.', 'error');
+      addToast('Authentication Required. Please sign in to access this page.', 'error');
       setHasToasted(true);
     }
   }, [isAuthenticated, addToast, hasToasted]);
@@ -55,12 +55,12 @@ const MainUI = () => {
     return (
       <div className="min-h-screen bg-neutral-950 flex flex-col items-center justify-center space-y-4">
         <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin shadow-teal-glow"></div>
-        <p className="text-[10px] font-mono text-primary animate-pulse uppercase tracking-[0.2em]">Initializing_Neural_Link...</p>
+        <p className="text-[10px] font-mono text-primary animate-pulse uppercase tracking-[0.2em]">Loading TypeCraft System...</p>
       </div>
     );
   }
 
-  const showNavbar = !['/race', '/auth', '/onboarding'].includes(location.pathname);
+  const showNavbar = isAuthenticated && !['/auth', '/onboarding', '/'].includes(location.pathname);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">

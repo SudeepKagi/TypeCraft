@@ -64,7 +64,7 @@ export default {
         "full": "0.75rem"
       },
       fontFamily: {
-        "syne": ["Syne", "sans-serif"],
+        "syne": ["Archivo Black", "sans-serif"],
         "mono": ["Space Mono", "monospace"],
         "headline": ["Space Grotesk", "sans-serif"],
         "body": ["Inter", "sans-serif"],

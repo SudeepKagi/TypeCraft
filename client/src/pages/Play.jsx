@@ -23,17 +23,17 @@ const ResultsOverlay = ({ wpm, accuracy, xp, onRestart }) => {
           <div className="absolute top-[-100px] left-[-100px] w-64 h-64 bg-primary/10 blur-[100px] rounded-full" />
           <div className="absolute bottom-[-100px] right-[-100px] w-64 h-64 bg-primary/10 blur-[100px] rounded-full" />
 
-          <h2 className="font-syne font-black text-5xl md:text-6xl text-neutral-100 tracking-tighter mb-4 relative z-10">TOTAL_SYNC</h2>
+          <h2 className="font-syne text-4xl md:text-5xl text-neutral-100 tracking-tighter mb-4 relative z-10 uppercase tracking-widest">Results</h2>
           <div className="w-12 h-1 bg-primary mx-auto mb-10 relative z-10" />
           
           <div className="grid grid-cols-2 gap-8 md:gap-12 mb-12 relative z-10">
-             <div className="flex flex-col gap-2">
-                <span className="text-6xl md:text-7xl font-syne font-black text-primary">{wpm}</span>
-                <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest">WPM_PERFORMANCE</span>
+             <div className="flex flex-col gap-2 overflow-hidden">
+                <span className="text-5xl md:text-6xl font-syne text-primary truncate leading-tight tracking-tighter uppercase">{wpm}</span>
+                <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest whitespace-nowrap">Words Per Minute</span>
              </div>
-             <div className="flex flex-col gap-2">
-                <span className="text-6xl md:text-7xl font-syne font-black text-neutral-100">{accuracy}<span className="text-3xl text-neutral-600">%</span></span>
-                <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest">PRECISION_STABILITY</span>
+             <div className="flex flex-col gap-2 overflow-hidden">
+                <span className="text-5xl md:text-6xl font-syne text-neutral-100 truncate leading-tight tracking-tighter uppercase">{accuracy}<span className="text-3xl text-neutral-600">%</span></span>
+                <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest whitespace-nowrap">Accuracy Rate</span>
              </div>
           </div>
 
@@ -41,19 +41,19 @@ const ResultsOverlay = ({ wpm, accuracy, xp, onRestart }) => {
              <div className="flex items-center gap-4">
                 <span className="material-symbols-outlined text-primary text-[28px]">bolt</span>
                 <div className="text-left">
-                   <h3 className="text-[10px] font-mono text-primary font-bold uppercase tracking-[0.2em]">Neural Gain</h3>
-                   <p className="text-[10px] font-inter text-neutral-500 italic uppercase">Connection strengthened.</p>
+                   <h3 className="text-[10px] font-mono text-primary font-bold uppercase tracking-[0.2em]">XP Gained</h3>
+                   <p className="text-[10px] font-inter text-neutral-500 italic uppercase">Skill development confirmed.</p>
                 </div>
              </div>
-             <span className="text-3xl md:text-4xl font-syne font-black text-primary animate-pulse tracking-tighter">+{xp} XP</span>
+             <span className="text-3xl md:text-4xl font-syne text-primary animate-pulse tracking-tighter">+{xp} XP</span>
           </div>
 
           <div className="flex flex-col items-center gap-4 relative z-10">
              <button 
                 onClick={onRestart}
-                className="w-full py-5 bg-primary text-on-primary font-syne font-black text-xl rounded-xl hover:bg-emerald-400 transition-all shadow-teal-glow group active:scale-95"
+                className="w-full py-5 bg-primary text-on-primary font-syne text-xl rounded-xl hover:bg-emerald-400 transition-all shadow-teal-glow group active:scale-95"
              >
-                FORCE_REBOOT
+                RESTART
              </button>
              <div className="flex items-center gap-4 text-[10px] font-mono text-neutral-500 uppercase tracking-[0.3em] opacity-40">
                 <span className="bg-neutral-800 px-2 py-1 rounded border border-white/10 uppercase">Press Enter to Start New Test</span>
@@ -80,7 +80,6 @@ const Play = () => {
   const addXP = useAuthStore(state => state.addXP);
 
   const handleRestart = useCallback((mode = selectedMode, duration = selectedDuration) => {
-    // Generate approx 3.5 words per second + 20 buffer
     const wordTarget = Math.floor(duration * 3.5) + 20;
     const newPassage = generatePassage(mode, wordTarget);
     setPassage(newPassage);
@@ -89,14 +88,12 @@ const Play = () => {
     setIsTimeWarpActive(false);
   }, [selectedMode, selectedDuration, reset]);
 
-  // Sync timer with duration selection
   useEffect(() => {
     if (status === 'idle') {
       setTimeLeft(selectedDuration);
     }
   }, [selectedDuration, status]);
 
-  // Time Warp and XP Logic
   const potentialXp = Math.max(1, Math.floor(currentWPM * (accuracy / 100) * (selectedDuration / 60)));
 
   useEffect(() => {
@@ -123,7 +120,6 @@ const Play = () => {
     return () => clearInterval(timer);
   }, [status, timeLeft, endTest]);
 
-  // Handle saving results
   useEffect(() => {
     if (status === 'finished' && userId) {
       fetch('http://localhost:4000/api/results', {
@@ -149,7 +145,6 @@ const Play = () => {
     }
   }, [status, userId, currentWPM, accuracy, timeLeft, addXP, selectedDuration, selectedMode]);
 
-  // Restart shortcut
   useEffect(() => {
     const handleKey = (e) => {
       if (e.key === 'Escape') {
@@ -234,28 +229,27 @@ const Play = () => {
         {/* Stats Section */}
         <div className={`w-full mt-24 grid grid-cols-1 md:grid-cols-4 gap-8 p-8 border border-white/5 rounded-2xl transition-colors duration-500 ${isTimeWarpActive ? 'bg-primary/5 border-primary/20' : 'bg-neutral-950/20'}`}>
           <div className="flex flex-col items-center md:items-start gap-1">
-            <span className="font-syne text-5xl font-black text-neutral-100 tracking-tighter">{currentWPM}</span>
-            <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">Words_Per_Minute</span>
+            <span className="font-syne text-5xl text-neutral-100 tracking-tighter">{currentWPM}</span>
+            <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">WPM</span>
           </div>
           <div className="flex flex-col items-center md:items-start gap-1">
-            <span className="font-syne text-5xl font-black text-neutral-100 tracking-tighter">{accuracy}<span className="text-2xl text-neutral-500">%</span></span>
-            <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">Precision_Rate</span>
+            <span className="font-syne text-5xl text-neutral-100 tracking-tighter">{accuracy}<span className="text-2xl text-neutral-500">%</span></span>
+            <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">Accuracy</span>
           </div>
           <div className="flex flex-col items-center md:items-start gap-1">
-            <span className="font-syne text-5xl font-black text-primary tracking-tighter shadow-teal-glow">
+            <span className="font-syne text-5xl text-primary tracking-tighter shadow-teal-glow">
               {Math.floor(timeLeft / 60)}:{(timeLeft % 60).toString().padStart(2, '0')}
             </span>
-            <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">Time_Remaining</span>
+            <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">Remaining</span>
           </div>
           <div className="flex flex-col items-center md:items-start gap-1">
-            <span className={`font-syne text-5xl font-black tracking-tighter transition-colors ${isTimeWarpActive ? 'text-primary animate-pulse' : 'text-neutral-400'}`}>
+            <span className={`font-syne text-5xl tracking-tighter transition-colors ${isTimeWarpActive ? 'text-primary animate-pulse' : 'text-neutral-400'}`}>
               +{potentialXp}
             </span>
             <span className="font-mono text-[10px] text-neutral-500 tracking-widest uppercase">Potential_XP</span>
           </div>
         </div>
 
-        {/* Results Screen */}
         {status === 'finished' && (
           <ResultsOverlay 
             wpm={currentWPM}
@@ -265,10 +259,9 @@ const Play = () => {
           />
         )}
 
-        {/* Keyboard Shortcut Hint */}
         <div className="mt-20 group cursor-pointer flex items-center gap-4 text-[10px] font-mono text-neutral-500 hover:text-neutral-300 transition-colors uppercase tracking-widest" onClick={() => handleRestart()}>
           <span className="bg-neutral-900 px-2 py-1 rounded border border-white/10 group-hover:border-primary/40 transition-colors">Esc</span>
-          <span>to_Initialize_Reboot</span>
+          <span>to_Restart_Test</span>
         </div>
       </main>
     </PageWrapper>

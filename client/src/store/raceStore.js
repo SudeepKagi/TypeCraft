@@ -2,8 +2,11 @@ import { create } from 'zustand';
 
 const useRaceStore = create((set, get) => ({
   roomCode: null,
+  roomType: 'private', // private, tournament, raid
   players: [],
   status: 'idle', // idle, lobby, countdown, racing, finished
+  raidProgress: 0,
+  raidTarget: 0,
   GhostRun: null,
   myDbId: null,
   
@@ -19,8 +22,11 @@ const useRaceStore = create((set, get) => ({
   handleRaceUpdate: (data) => {
     set((state) => ({
       roomCode: data.roomCode || state.roomCode,
+      roomType: data.type || state.roomType,
       status: data.status,
-      players: data.players
+      players: data.players,
+      raidProgress: data.raidProgress || state.raidProgress,
+      raidTarget: data.raidTarget || state.raidTarget
     }));
   }
 }));

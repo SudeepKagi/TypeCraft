@@ -1,5 +1,8 @@
 const { generateRacePassage } = require('../data/passages');
 const rooms = {};
+const TOURNAMENT_QUORUM = 4;
+const RAID_TARGET_WPM = 400; // Total WPM goal for the squad
+
 
 const generateRoomCode = () => {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -14,6 +17,7 @@ const raceHandler = (io, socket, prisma) => {
     
     rooms[roomCode] = {
       id: roomCode,
+      type: data.type || 'private', // private, tournament, raid
       status: 'waiting', // waiting, countdown, racing, finished
       players: [
         {
@@ -27,7 +31,8 @@ const raceHandler = (io, socket, prisma) => {
           isFinished: false
         }
       ],
-      startTime: null
+      startTime: null,
+      raidProgress: 0 // Used for Squad Raids
     };
 
     socket.join(roomCode);
@@ -65,12 +70,64 @@ const raceHandler = (io, socket, prisma) => {
     socket.join(roomCode);
     io.to(roomCode).emit('race:update', { 
       roomCode: roomCode,
+      type: room.type,
       status: room.status, 
-      players: room.players 
+      players: room.players,
+      raidTarget: RAID_TARGET_WPM
     });
     
-    console.log(`[Race] ${user.username} joined room ${roomCode}`);
+    // Auto-start Tournament if quorum reached
+    if (room.type === 'tournament' && room.players.length >= TOURNAMENT_QUORUM && room.status === 'waiting') {
+      startRaceCountdown(io, roomCode);
+    }
+
+    console.log(`[Race] ${user.username} joined room ${roomCode} (${room.type})`);
   });
+
+  // Automated Tournament Matchmaking
+  socket.on('race:join:tournament', (data) => {
+    const { user } = data;
+    let roomCode = Object.keys(rooms).find(code => 
+      rooms[code].type === 'tournament' && 
+      rooms[code].status === 'waiting' && 
+      rooms[code].players.length < TOURNAMENT_QUORUM
+    );
+
+    if (!roomCode) {
+      roomCode = generateRoomCode();
+      rooms[roomCode] = {
+        id: roomCode,
+        type: 'tournament',
+        status: 'waiting',
+        players: [],
+        startTime: null
+      };
+    }
+    socket.emit('race:tournament:found', { roomCode });
+  });
+
+  const startRaceCountdown = (io, roomCode) => {
+    const room = rooms[roomCode];
+    if (!room || room.status !== 'waiting') return;
+
+    room.status = 'countdown';
+    io.to(roomCode).emit('race:update', { status: 'countdown', players: room.players });
+    
+    let count = 8; // Public tournaments get longer countdown
+    const interval = setInterval(() => {
+      count -= 1;
+      io.to(roomCode).emit('race:countdown', count);
+      
+      if (count === 0) {
+        clearInterval(interval);
+        room.status = 'racing';
+        room.startTime = Date.now();
+        const passage = generateRacePassage('quotes', 40); 
+        room.passage = passage;
+        io.to(roomCode).emit('race:started', { startTime: room.startTime, passage: room.passage });
+      }
+    }, 1000);
+  };
 
   // Start the race countdown
   socket.on('race:start', ({ roomCode }) => {
@@ -115,8 +172,9 @@ const raceHandler = (io, socket, prisma) => {
         player.isFinished = true;
         // Save to DB and Award XP
         if (player.dbId) {
-          // Calculate XP: (WPM * Accuracy / 100)
-          const xpGained = Math.max(1, Math.floor(parseFloat(wpm) * (parseFloat(accuracy || 100) / 100)));
+          // XP Multipliers: Tournament (Competitive) = 2.5x, Raid (Collaborative) = 1.2x base + Team Bonus
+          const multiplier = room.type === 'tournament' ? 2.5 : (room.type === 'raid' ? 1.2 : 1.0);
+          const xpGained = Math.max(1, Math.floor(parseFloat(wpm) * (parseFloat(accuracy || 100) / 100) * multiplier));
           
           Promise.all([
             prisma.raceResult.create({
@@ -133,6 +191,17 @@ const raceHandler = (io, socket, prisma) => {
               }
             })
           ]).catch(console.error);
+        }
+      }
+
+      // RAID COLLECTIVE PROGRESS LOGIC
+      if (room.type === 'raid') {
+        const totalWpm = room.players.reduce((acc, p) => acc + (p.wpm || 0), 0);
+        room.raidProgress = totalWpm;
+        
+        if (totalWpm >= RAID_TARGET_WPM) {
+          room.status = 'finished';
+          room.raidVictory = true;
         }
       }
 

@@ -19,15 +19,15 @@ const Settings = () => {
     <PageWrapper>
       <main className="pt-32 pb-20 px-6 max-w-4xl mx-auto min-h-screen flex flex-col gap-12">
         <header>
-           <h1 className="text-5xl font-syne font-black text-neutral-100 tracking-tighter uppercase">Settings_Control</h1>
-           <p className="text-sm text-neutral-500 font-mono mt-2 tracking-widest uppercase">System Configuration // Alpha-09</p>
+           <h1 className="text-4xl md:text-5xl font-syne font-black text-neutral-100 tracking-tighter uppercase">Settings</h1>
+           <p className="text-sm text-neutral-500 font-mono mt-2 tracking-widest uppercase">User Preferences // Configuration</p>
         </header>
 
         {/* Audio Section */}
         <section className="bg-[#111111] p-8 rounded-xl border border-white/5 space-y-8">
           <div className="flex items-center gap-3 border-b border-white/5 pb-4">
              <span className="material-symbols-outlined text-primary">volume_up</span>
-             <h2 className="font-syne text-xl uppercase tracking-tight">Audio_Feedback</h2>
+             <h2 className="font-syne text-xl uppercase tracking-tight">Audio Feedback</h2>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -75,11 +75,11 @@ const Settings = () => {
         <section className="bg-[#111111] p-8 rounded-xl border border-white/5 space-y-8">
           <div className="flex items-center gap-3 border-b border-white/5 pb-4">
              <span className="material-symbols-outlined text-primary">palette</span>
-             <h2 className="font-syne text-xl uppercase tracking-tight">Visual_Synthesis</h2>
+             <h2 className="font-syne text-xl uppercase tracking-tight">Visual Interface</h2>
           </div>
 
           <div className="space-y-4">
-            <span className="text-xs font-mono text-neutral-400 uppercase tracking-widest block">Accent Color Overlay</span>
+            <span className="text-xs font-mono text-neutral-400 uppercase tracking-widest block">Interface Theme</span>
             <div className="flex flex-wrap gap-4">
               {themes.map((t) => (
                 <button
@@ -98,22 +98,22 @@ const Settings = () => {
         {/* Profile Section */}
         <section className="bg-[#111111] p-8 rounded-xl border border-white/5 space-y-8">
            <div className="flex items-center gap-3 border-b border-white/5 pb-4">
-             <span className="material-symbols-outlined text-primary">identity_platform</span>
-             <h2 className="font-syne text-xl uppercase tracking-tight">Pilot_Credentials</h2>
+             <span className="material-symbols-outlined text-primary">person</span>
+             <h2 className="font-syne text-xl uppercase tracking-tight">Account Profile</h2>
           </div>
 
           <div className="flex items-center gap-6">
             <div className="w-20 h-20 rounded-full border-2 border-primary p-1">
-              <img src={user?.avatarUrl} alt="Pilot Avatar" className="w-full h-full rounded-full object-cover" />
+              <img src={user?.avatarUrl} alt="User Avatar" className="w-full h-full rounded-full object-cover" />
             </div>
             <div className="flex-1 space-y-1">
               <div className="flex items-baseline gap-2">
                 <span className="text-2xl font-syne font-bold uppercase">{user?.username}</span>
-                <span className="text-xs font-mono text-primary font-bold">LVL_{user?.level}</span>
+                <span className="text-xs font-mono text-primary font-bold">LVL {user?.level}</span>
               </div>
-              <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">Digital Signature Verified // Alpha Link Established</p>
+              <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">Status: Active // Identity Verified</p>
             </div>
-            <button className="bg-neutral-800 px-4 py-2 text-[10px] font-mono text-neutral-400 hover:text-neutral-100 transition-colors uppercase border border-white/5">Update_ID</button>
+            <button className="bg-neutral-800 px-4 py-2 text-[10px] font-mono text-neutral-400 hover:text-neutral-100 transition-colors uppercase border border-white/5">Edit Profile</button>
           </div>
         </section>
 

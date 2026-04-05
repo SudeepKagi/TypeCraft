@@ -16,11 +16,11 @@ const Auth = () => {
 
         <div className="w-full max-w-md space-y-8 relative z-10">
           <div className="text-center space-y-2">
-            <h1 className="text-5xl font-syne font-extrabold tracking-tight text-on-surface uppercase italic">
-              Pilot_Login
+            <h1 className="text-4xl md:text-5xl font-syne font-black tracking-tight text-on-surface uppercase italic">
+              User Sign In
             </h1>
             <p className="text-on-surface-variant font-mono text-xs uppercase tracking-[0.2em]">
-              Initialize secure diagnostic link
+              Secure Identity Verification
             </p>
           </div>
 
@@ -50,12 +50,12 @@ const Auth = () => {
                 <div className="w-full border-t border-neutral-800"></div>
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-surface-container-low px-4 text-on-surface-variant font-mono">Quantum Auth Layer</span>
+                <span className="bg-surface-container-low px-4 text-on-surface-variant font-mono">Professional Access</span>
               </div>
             </div>
 
             <p className="text-[10px] text-neutral-500 font-mono text-center leading-relaxed max-w-[280px] mx-auto uppercase">
-              By initializing authentication, you agree to the TypeCraft protocol standards and performance monitoring.
+              By signing in, you agree to the TypeCraft Terms of Service and Privacy Policy.
             </p>
           </div>
         </div>

@@ -15,30 +15,39 @@ export const Navbar = () => {
   const progressPercent = Math.min(100, Math.max(0, ((currentXP - xpAtStartOfLevel) / (xpAtNextLevel - xpAtStartOfLevel)) * 100));
 
   return (
-    <nav className="fixed top-0 w-full z-50 bg-neutral-950/50 backdrop-blur-xl border-b border-neutral-900 shadow-[0_0_32px_rgba(29,158,117,0.08)] flex justify-between items-center px-8 py-4">
-      <div className="flex items-center gap-8">
-        <Link to="/" className="text-2xl font-bold font-syne text-primary tracking-tighter">TypeCraft</Link>
-        {user && (
-          <div className="hidden md:flex gap-6 font-mono text-[11px] uppercase tracking-[0.1em]">
-            <Link to="/play" className="text-on-surface hover:text-primary transition-colors duration-200">Play</Link>
-            <Link to="/race" className="text-neutral-500 hover:text-neutral-50 transition-colors duration-200">Race</Link>
-            <Link to="/train" className="text-neutral-500 hover:text-neutral-50 transition-colors duration-200">Train</Link>
-            <Link to="/dashboard" className="text-neutral-500 hover:text-neutral-50 transition-colors duration-200">Dashboard</Link>
-            <Link to="/leaderboard" className="text-neutral-500 hover:text-neutral-50 transition-colors duration-200">Leaderboard</Link>
-          </div>
-        )}
+    <nav className="fixed top-0 w-full z-50 bg-neutral-950/90 backdrop-blur-xl border-b border-white/5 flex items-center px-10 py-4 h-20">
+      {/* LEFT: LOGO */}
+      <div className="flex-1 flex items-center justify-start">
+        <Link to="/" className="text-3xl font-syne text-primary tracking-tighter">TypeCraft</Link>
       </div>
-      
-      <div className="flex items-center gap-6">
+
+      {/* CENTER: NAV OPTIONS */}
+      {user && (
+        <div className="flex-initial hidden md:flex items-center justify-center">
+          <div className="flex gap-8 font-mono text-[9px] uppercase tracking-[0.2em] bg-neutral-900 px-6 py-3 rounded-full border border-white/10 items-center">
+            <Link to="/play" className={`${location.pathname === '/play' ? 'text-primary' : 'text-neutral-500 hover:text-neutral-200'} transition-all`}>Solo</Link>
+            <Link to="/race" className={`${location.pathname === '/race' && !location.search ? 'text-primary' : 'text-neutral-500 hover:text-neutral-200'} transition-all`}>Race</Link>
+            <div className="w-[1px] h-3 bg-white/10 mx-1"></div>
+            <Link to="/race?type=tournament" className={`${location.search.includes('tournament') ? 'text-amber-400' : 'text-neutral-500 hover:text-amber-300'} transition-all font-bold`}>Pro Series</Link>
+            <Link to="/race?type=raid" className={`${location.search.includes('raid') ? 'text-cyan-400' : 'text-neutral-500 hover:text-cyan-300'} transition-all font-bold`}>Raids</Link>
+            <div className="w-[1px] h-3 bg-white/10 mx-1"></div>
+            <Link to="/train" className={`${location.pathname === '/train' ? 'text-primary' : 'text-neutral-500 hover:text-neutral-200'} transition-all`}>Train</Link>
+            <Link to="/dashboard" className={`${location.pathname === '/dashboard' ? 'text-primary' : 'text-neutral-500 hover:text-neutral-200'} transition-all`}>Dash</Link>
+          </div>
+        </div>
+      )}
+
+      {/* RIGHT: PROFILE & STATS */}
+      <div className="flex-1 flex items-center justify-end gap-8">
         {user ? (
           <>
-            {/* Tier & XP HUD */}
-            <div className="hidden sm:flex flex-col gap-1.5 min-w-[140px]">
+            {/* XP HUD */}
+            <div className="hidden xl:flex flex-col gap-1 min-w-[180px]">
                <div className="flex justify-between items-end px-0.5">
-                 <span className="text-[9px] font-syne font-black text-primary italic tracking-tight">PILOT_LEVEL_{level}</span>
-                 <span className="text-[9px] font-mono text-neutral-500 font-bold">{currentXP} / {xpAtNextLevel} XP</span>
+                 <span className="text-[10px] font-syne text-primary italic tracking-widest uppercase">LVL {level}</span>
+                 <span className="text-[10px] font-mono text-neutral-500">{currentXP} XP</span>
                </div>
-               <div className="h-[4px] w-full bg-neutral-900 rounded-full border border-white/5 overflow-hidden">
+               <div className="h-[2px] w-full bg-white/10 rounded-full overflow-hidden">
                  <div 
                    className="h-full bg-primary shadow-teal-glow transition-all duration-1000 ease-out" 
                    style={{ width: `${progressPercent}%` }}
@@ -48,21 +57,21 @@ export const Navbar = () => {
 
             <button 
               onClick={logout}
-              className="px-4 py-2 bg-neutral-900 border border-red-500/20 text-red-400 font-syne font-black text-[10px] uppercase tracking-[0.2em] rounded-lg hover:bg-red-500/10 hover:border-red-500/40 transition-all active:scale-95"
+              className="px-5 py-2.5 bg-neutral-900 border border-white/5 text-neutral-500 font-syne text-[10px] uppercase tracking-widest rounded-lg hover:text-neutral-200 transition-all"
             >
-              Pilot_Exit
+              SIGN OUT
             </button>
 
-            <Link to="/dashboard" className="w-10 h-10 rounded-lg overflow-hidden border border-primary/20 hover:border-primary transition-all p-0.5 bg-neutral-900 shadow-glow-primary">
-              <img src={user?.avatarUrl} alt="User avatar" className="w-full h-full object-cover rounded-[6px]" />
+            <Link to="/settings" className="w-11 h-11 rounded-full overflow-hidden border-2 border-white/5 hover:border-primary transition-all p-0.5 bg-neutral-900 flex items-center justify-center">
+              <img src={user?.avatarUrl} alt="User Avatar" className="w-full h-full object-cover rounded-full" />
             </Link>
           </>
         ) : (
           <Link 
             to="/auth" 
-            className="px-5 py-2 bg-primary/10 border border-primary/20 text-primary text-[10px] font-mono uppercase tracking-widest hover:bg-primary hover:text-on-primary transition-all duration-300 rounded-lg shadow-teal-glow-sm"
+            className="px-8 py-3 bg-primary text-neutral-950 text-xs font-syne uppercase tracking-widest hover:bg-emerald-400 transition-all rounded-xl shadow-teal-glow active:scale-95"
           >
-            Pilot_Login
+            SIGN IN
           </Link>
         )}
       </div>

@@ -4,14 +4,14 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
 
 const AVATARS = [
-  { id: 'avatar_1', name: 'Cyber-Pulse', url: '/avatars/avatar_1.png' },
-  { id: 'avatar_2', name: 'Neon-Merc', url: '/avatars/avatar_2.png' },
-  { id: 'avatar_3', name: 'Signal-Breaker', url: '/avatars/avatar_3.png' },
-  { id: 'avatar_4', name: 'Neural-Ghost', url: '/avatars/avatar_4.png' },
-  { id: 'avatar_5', name: 'Data-Reaper', url: '/avatars/avatar_5.png' },
-  { id: 'avatar_6', name: 'Void-Watcher', url: '/avatars/avatar_6.png' },
-  { id: 'avatar_7', name: 'Chrome-Rider', url: '/avatars/avatar_7.png' },
-  { id: 'avatar_8', name: 'Pulse-Medic', url: '/avatars/avatar_8.png' },
+  { id: 'avatar_1', name: 'Pulse', url: '/avatars/avatar_1.png' },
+  { id: 'avatar_2', name: 'Neon', url: '/avatars/avatar_2.png' },
+  { id: 'avatar_3', name: 'Signal', url: '/avatars/avatar_3.png' },
+  { id: 'avatar_4', name: 'Ghost', url: '/avatars/avatar_4.png' },
+  { id: 'avatar_5', name: 'Reaper', url: '/avatars/avatar_5.png' },
+  { id: 'avatar_6', name: 'Watcher', url: '/avatars/avatar_6.png' },
+  { id: 'avatar_7', name: 'Rider', url: '/avatars/avatar_7.png' },
+  { id: 'avatar_8', name: 'Medic', url: '/avatars/avatar_8.png' },
 ];
 
 const Onboarding = () => {
@@ -47,10 +47,10 @@ const Onboarding = () => {
         completeOnboarding(data.user);
         navigate('/dashboard');
       } else {
-        setError(data.error || 'Failed to complete initialization.');
+        setError(data.error || 'Failed to complete setup.');
       }
     } catch (err) {
-      setError('Connection to Nerve Center interrupted.');
+      setError('Connection error. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -58,7 +58,6 @@ const Onboarding = () => {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6 relative overflow-hidden">
-      {/* Background Ambience */}
       <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.05)_0%,transparent_70%)]"></div>
       <div className="dot-overlay absolute inset-0 opacity-20"></div>
 
@@ -70,11 +69,11 @@ const Onboarding = () => {
         <div className="mb-10">
           <div className="flex items-center gap-2 mb-2">
              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-             <span className="text-[10px] font-mono text-primary uppercase tracking-[0.3em]">Neural_Link_Protocol_v.2.4</span>
+             <span className="text-[10px] font-mono text-primary uppercase tracking-[0.3em]">TypeCraft_System_v.2.4</span>
           </div>
-          <h1 className="text-4xl font-syne font-black text-white tracking-tighter">Initialize Identity</h1>
+          <h1 className="text-3xl md:text-4xl font-syne font-black text-white tracking-tighter uppercase">Profile Setup</h1>
           <p className="text-neutral-500 text-sm mt-2 font-inter font-medium leading-relaxed">
-            Welcome to the TypeCraft network, Pilot. Before we deploy you to the arena, we need to calibrate your neural markers.
+            Welcome to TypeCraft. Before you begin, please set up your professional profile and choose an avatar to identify yourself in the arena.
           </p>
         </div>
 
@@ -88,12 +87,12 @@ const Onboarding = () => {
               className="space-y-6"
             >
               <div className="space-y-2">
-                <label className="text-[10px] uppercase font-mono text-neutral-400 tracking-widest block px-1">Choose_Handle</label>
+                <label className="text-[10px] uppercase font-mono text-neutral-400 tracking-widest block px-1">Username</label>
                 <input 
                   type="text" 
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="e.g. NeoTypist_01"
+                  placeholder="e.g. User_01"
                   className="w-full bg-neutral-900/50 border border-white/5 rounded-xl px-5 py-4 text-white font-mono placeholder:text-neutral-700 focus:border-primary/40 focus:ring-1 focus:ring-primary/20 transition-all outline-none"
                 />
               </div>
@@ -103,7 +102,7 @@ const Onboarding = () => {
                 disabled={username.length <= 2}
                 className="w-full py-4 bg-primary text-neutral-900 font-syne font-black text-lg uppercase tracking-wider rounded-xl shadow-teal-glow transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
               >
-                Proceed_To_Calibrate
+                Continue
               </button>
             </motion.div>
           ) : (
@@ -147,7 +146,7 @@ const Onboarding = () => {
                   disabled={!selectedAvatar || loading}
                   className="flex-[2] py-4 bg-primary text-neutral-900 font-syne font-black text-lg uppercase tracking-wider rounded-xl shadow-teal-glow transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30"
                 >
-                  {loading ? 'Initializing...' : 'Confirm_Links'}
+                  {loading ? 'Saving...' : 'Complete Setup'}
                 </button>
               </div>
             </motion.div>
