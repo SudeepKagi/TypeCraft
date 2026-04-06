@@ -119,7 +119,7 @@ const MainUI = () => {
     );
   }
 
-  const showNavbar = !['/auth', '/onboarding'].includes(location.pathname);
+  const showNavbar = !['/', '/auth', '/onboarding'].includes(location.pathname);
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
