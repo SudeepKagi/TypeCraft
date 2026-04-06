@@ -65,7 +65,7 @@ const Trainer = () => {
   // 1. Handle saving results once when finished
   useEffect(() => {
     if (status === 'finished' && passage && userId) {
-      fetch('http://localhost:4000/api/results', {
+      fetch(`${API_BASE_URL}/api/results`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,7 +100,7 @@ const Trainer = () => {
       if (!userId) return;
       setLoading(true);
       try {
-         const response = await fetch(`http://localhost:4000/api/users/${userId}/heatmap`);
+         const response = await fetch(`${API_BASE_URL}/api/users/${userId}/heatmap`);
          const data = await response.json();
          
          const weaknesses = Object.entries(data)

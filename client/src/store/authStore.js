@@ -25,7 +25,7 @@ const useAuthStore = create((set, get) => ({
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 5000);
       
-      const res = await fetch('http://localhost:4000/auth/me', {
+      const res = await fetch(`${API_BASE_URL}/auth/me`, {
         credentials: 'include',
         signal: controller.signal
       });
