@@ -687,9 +687,11 @@ const Landing = () => {
                             The ultimate arena for competitive typing athletes. Race harder. Train smarter. Break the sound barrier.
                         </p>
                         <div className="flex gap-4">
-                            <a href="#" className="p-2 bg-white/[0.03] border border-white/5 rounded-lg text-[#444444] hover:text-[#1D9E75] transition-colors"><Twitter size={20} /></a>
-                            <a href="#" className="p-2 bg-white/[0.03] border border-white/5 rounded-lg text-[#444444] hover:text-[#1D9E75] transition-colors"><Github size={20} /></a>
-                            <a href="#" className="p-2 bg-white/[0.03] border border-white/5 rounded-lg text-[#444444] hover:text-[#1D9E75] transition-colors"><MessageSquare size={20} /></a>
+                            <a href="https://github.com/SudeepKagi" target="_blank" rel="noreferrer" className="p-2 bg-white/[0.03] border border-white/5 rounded-lg text-[#444444] hover:text-[#1D9E75] transition-colors"><Github size={20} /></a>
+                            <a href="https://www.linkedin.com/in/sudeep-kagi-b87657324/" target="_blank" rel="noreferrer" className="p-2 bg-white/[0.03] border border-white/5 rounded-lg text-[#444444] hover:text-[#1D9E75] transition-colors">
+                              <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+                            </a>
+                            <a href="mailto:sudeepskagi@gmail.com" className="p-2 bg-white/[0.03] border border-white/5 rounded-lg text-[#444444] hover:text-[#1D9E75] transition-colors"><MessageSquare size={20} /></a>
                         </div>
                     </div>
 
@@ -709,7 +711,7 @@ const Landing = () => {
                 </div>
 
                 <div className="pt-8 border-t border-[#1E1E1E] flex flex-col md:flex-row justify-between items-center gap-4">
-                    <p className="text-[#444444] text-[12px] font-medium tracking-tight">© 2025 TypeCraft. Built for typists. All systems active.</p>
+                    <p className="text-[#444444] text-[12px] font-medium tracking-tight">© 2026 TypeCraft. Engineered by <span className="text-[#888888]">Sudeep S</span>. All systems active.</p>
                     <div className="flex gap-8">
                         <a href="#" className="text-[#444444] text-[12px] hover:text-[#888888] transition-colors">Privacy</a>
                         <a href="#" className="text-[#444444] text-[12px] hover:text-[#888888] transition-colors">Terms</a>

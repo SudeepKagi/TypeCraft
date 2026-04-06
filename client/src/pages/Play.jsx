@@ -5,6 +5,7 @@ import { useTyping } from '../hooks/useTyping';
 import useAuthStore from '../store/authStore';
 import { generatePassage } from '../lib/contentLibrary';
 import { Logo } from '../components/ui/Logo';
+import { API_BASE_URL } from '../lib/constants';
 
 const ResultsOverlay = ({ wpm, accuracy, xp, onRestart }) => {
   useEffect(() => {
@@ -123,6 +124,23 @@ const Play = () => {
     }
     return () => clearInterval(timer);
   }, [status, timeLeft, endTest]);
+
+  const saveResults = async (resultData) => {
+    try {
+      const response = await fetch(`${API_BASE_URL}/api/results`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(resultData)
+      });
+      if (!response.ok) throw new Error('Result sync failed');
+      return await response.json();
+    } catch (err) {
+      console.error('Save results error:', err);
+      throw err;
+    }
+  };
+
 
   useEffect(() => {
     if (status === 'finished' && userId) {

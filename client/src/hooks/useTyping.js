@@ -2,54 +2,7 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { calculateWPM, calculateConsistency, calculateAccuracy } from '../lib/wpmCalc';
 import useSettingsStore from '../store/settingsStore';
 
-// Simple Web Audio Sound Generator - Singleton Pattern for Zero Latency
-let audioCtx = null;
-
-const getAudioContext = () => {
-  if (!audioCtx) {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (AudioContext) audioCtx = new AudioContext();
-  }
-  return audioCtx;
-};
-
-const playClickSound = (type, volume) => {
-  const ctx = getAudioContext();
-  if (!ctx) return;
-  
-  // Resume context if suspended (browser security)
-  if (ctx.state === 'suspended') ctx.resume();
-  const osc = ctx.createOscillator();
-  const gain = ctx.createGain();
-  
-  osc.connect(gain);
-  gain.connect(ctx.destination);
-  
-  const now = ctx.currentTime;
-  
-  if (type === 'mechanical') {
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(150, now);
-    osc.frequency.exponentialRampToValueAtTime(40, now + 0.1);
-    gain.gain.setValueAtTime(volume * 0.5, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
-  } else if (type === 'retro') {
-    osc.type = 'sawtooth';
-    osc.frequency.setValueAtTime(800, now);
-    osc.frequency.exponentialRampToValueAtTime(200, now + 0.05);
-    gain.gain.setValueAtTime(volume * 0.3, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
-  } else {
-    // Minimal
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1200, now);
-    gain.gain.setValueAtTime(volume * 0.2, now);
-    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.03);
-  }
-  
-  osc.start(now);
-  osc.stop(now + 0.1);
-};
+// Sound effects disabled per system update
 
 const generateWords = (passage) => {
   return passage.split(' ').map(word => ({
@@ -111,10 +64,7 @@ export const useTyping = (initialPassage) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
     if (session.status === 'finished') return;
 
-    const { soundEnabled, soundType, volume } = useSettingsStore.getState();
-    if (soundEnabled) {
-      playClickSound(soundType, volume);
-    }
+    // Sound logic removed per system update
 
     const key = e.key;
     if (key.length === 1 || key === 'Backspace' || key === ' ') {
