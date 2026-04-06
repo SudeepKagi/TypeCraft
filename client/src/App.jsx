@@ -131,7 +131,7 @@ const MainUI = () => {
             path="/" 
             element={
               isAuthenticated ? (
-                onboardingCompleted ? <Navigate to="/dashboard" /> : <Navigate to="/onboarding" />
+                onboardingCompleted ? <Navigate to="/play" /> : <Navigate to="/onboarding" />
               ) : <Landing />
             } 
           />
@@ -186,7 +186,7 @@ const MainUI = () => {
           <Route 
             path="/auth" 
             element={
-              isAuthenticated ? <Navigate to="/dashboard" /> : <Auth />
+              isAuthenticated ? <Navigate to="/play" /> : <Auth />
             } 
           />
           <Route 

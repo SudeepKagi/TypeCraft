@@ -78,7 +78,7 @@ module.exports = (prisma) => {
     router.get('/google/callback', 
       passport.authenticate('google', { failureRedirect: `${FRONTEND_URL}/auth?error=true` }),
       (req, res) => {
-        res.redirect(`${FRONTEND_URL}/dashboard`);
+        res.redirect(`${FRONTEND_URL}/play`);
       }
     );
   }
@@ -133,7 +133,7 @@ module.exports = (prisma) => {
     router.get('/github/callback', 
       passport.authenticate('github', { failureRedirect: `${FRONTEND_URL}/auth?error=true` }),
       (req, res) => {
-        res.redirect(`${FRONTEND_URL}/dashboard`);
+        res.redirect(`${FRONTEND_URL}/play`);
       }
     );
   }
@@ -156,7 +156,7 @@ module.exports = (prisma) => {
 
         req.login(user, (err) => {
           if (err) return res.status(500).json({ error: 'Dev Login failed' });
-          res.redirect(`${FRONTEND_URL}/dashboard`);
+          res.redirect(`${FRONTEND_URL}/play`);
         });
       } catch (error) {
         console.error('Dev Login Error:', error);
