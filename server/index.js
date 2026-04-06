@@ -11,18 +11,19 @@ const raceHandler = require('./src/handlers/raceHandler');
 const app = express();
 const server = http.createServer(app);
 
+const prisma = new PrismaClient();
+const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: frontendUrl,
     methods: ['GET', 'POST'],
     credentials: true
   }
 });
 
-const prisma = new PrismaClient();
-
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: frontendUrl,
   credentials: true
 }));
 app.use(express.json());
