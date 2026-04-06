@@ -53,7 +53,7 @@ const Leaderboard = () => {
              <div className="w-full h-[1px] bg-neutral-800/50 my-2"></div>
 
              <div className="flex justify-between items-center">
-                <span className="text-xs font-inter text-neutral-500">Avg Race</span>
+                <span className="text-xs font-inter text-neutral-500">Best Race</span>
                 <span className="text-sm font-mono text-neutral-100 font-bold">{myWpm} WPM</span>
              </div>
              <div className="flex justify-between items-center">
@@ -92,7 +92,7 @@ const Leaderboard = () => {
           <div className="grid grid-cols-12 gap-4 px-6 text-[10px] uppercase font-inter text-neutral-500 tracking-widest mb-4">
              <div className="col-span-1">Rank</div>
              <div className="col-span-5">User</div>
-             <div className="col-span-2 text-center">Avg WPM</div>
+             <div className="col-span-2 text-center">Best WPM</div>
              <div className="col-span-2 text-center">Tests</div>
              <div className="col-span-2 text-right">Accuracy</div>
           </div>
