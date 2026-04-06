@@ -37,7 +37,7 @@ const Onboarding = () => {
       const data = await res.json();
       if (data.success) {
         completeOnboarding(data.user);
-        navigate('/dashboard');
+        navigate('/play');
       } else {
         setError(data.error || 'Failed to complete setup.');
       }
