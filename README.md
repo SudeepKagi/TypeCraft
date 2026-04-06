@@ -1,5 +1,5 @@
 
-# TypeCraft
+# ⌨️ TypeCraft
 
 <div align="center">
   <img src="client/public/favicon.svg" width="120" height="120" alt="TypeCraft Logo" />
@@ -14,7 +14,6 @@
 </div>
 
 ---
-
 ## 📖 Overview
 
 **TypeCraft** is a professional-grade typing application designed for developers and power users who want to master their muscle memory. Unlike standard typing tutors, TypeCraft utilizes **Google Gemini 2.0 Flash** to analyze your character-level weaknesses and generate 100% saturated training passages in real-time.
@@ -158,7 +157,6 @@ socket.emit('race:progress', { roomCode, progress, wpm, accuracy });
   - **Body**: `{ userId, wpm, accuracy, duration, mode, keystrokes: [] }`
 
 ---
-
 ## 🤝 Contributing
 
 1. Fork the Project
@@ -168,11 +166,9 @@ socket.emit('race:progress', { roomCode, progress, wpm, accuracy });
 5. Open a Pull Request
 
 ---
-
 ## 📜 License
 
 Distributed under the ISC License. See `LICENSE` for more information.
-
 ## 🙏 Acknowledgments
 
 - **Google Gemini**: For providing the intelligence behind the AI Trainer.
