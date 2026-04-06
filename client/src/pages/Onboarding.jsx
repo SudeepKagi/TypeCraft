@@ -1,3 +1,9 @@
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Logo } from '../components/ui/Logo';
+import { AVATARS } from '../constants/avatars';
+import useAuthStore from '../store/authStore';
 import { API_BASE_URL } from '../lib/constants';
 
 const Onboarding = () => {
