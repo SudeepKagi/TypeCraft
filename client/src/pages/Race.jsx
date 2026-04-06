@@ -386,7 +386,7 @@ const Race = () => {
           </div>
         </div>
 
-        {status === 'finished' && (
+        {(status === 'finished' || typingStatus === 'finished') && (
           <RaceResultsOverlay 
              players={currentPlayers}
              wpm={currentWPM}

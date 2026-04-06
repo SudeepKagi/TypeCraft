@@ -25,6 +25,7 @@ export const Navbar = () => {
     { label: 'Race', path: '/race' },
     { label: 'Train', path: '/train' },
     { label: 'Pro Series', path: '/race?type=tournament' },
+    { label: 'Leaderboard', path: '/leaderboard' },
     { label: 'Dashboard', path: '/dashboard' }
   ];
 
@@ -77,7 +78,7 @@ export const Navbar = () => {
             {/* XP HUD - Minimalist */}
             <div className="hidden xl:flex flex-col gap-1.5 min-w-[200px] bg-white/[0.04] p-3 rounded-xl border border-white/10 shadow-glow-primary/5">
                <div className="flex justify-between items-baseline px-1">
-                 <span className="text-[11px] font-heading font-black text-primary uppercase tracking-[0.2em]">ROOM L{level}</span>
+                 <span className="text-[11px] font-heading font-black text-primary uppercase tracking-[0.2em]">LEVEL {level}</span>
                  <span className="text-[11px] font-mono text-neutral-400 font-bold">{currentXP} XP</span>
                </div>
                <div className="h-[3px] w-full bg-white/5 rounded-full overflow-hidden">

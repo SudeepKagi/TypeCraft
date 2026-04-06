@@ -12,6 +12,14 @@ const generateWords = (passage) => {
   }));
 };
 
+const compareChars = (pressed, expected) => {
+  if (pressed === expected) return true;
+  // Handle common dash/hyphen variants to prevent false negatives
+  const hyphens = ['-', '–', '—', '−'];
+  if (hyphens.includes(pressed) && hyphens.includes(expected)) return true;
+  return false;
+};
+
 export const useTyping = (initialPassage) => {
   const [session, setSession] = useState({
     words: generateWords(initialPassage),
@@ -118,7 +126,7 @@ export const useTyping = (initialPassage) => {
         } else {
           if (newSession.currentCharIndex < currentWord.letters.length) {
             const expectedChar = currentWord.letters[newSession.currentCharIndex].char;
-            const isCorrect = key === expectedChar;
+            const isCorrect = compareChars(key, expectedChar);
             
             currentWord.letters[newSession.currentCharIndex] = {
               ...currentWord.letters[newSession.currentCharIndex],

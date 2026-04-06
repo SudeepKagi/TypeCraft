@@ -171,21 +171,36 @@ const raceHandler = (io, socket, prisma) => {
           const multiplier = room.type === 'tournament' ? 2.5 : 1.0;
           const xpGained = Math.max(1, Math.floor(parseFloat(wpm) * (parseFloat(accuracy || 100) / 100) * multiplier));
           
-          Promise.all([
-            prisma.raceResult.create({
-              data: {
-                wpm: parseFloat(wpm),
-                accuracy: parseFloat(accuracy || 100),
-                userId: player.dbId
-              }
-            }),
-            prisma.user.update({
-              where: { id: player.dbId },
-              data: {
-                xp: { increment: xpGained }
-              }
-            })
-          ]).catch(console.error);
+          // Persist XP and calculate Level
+          (async () => {
+            try {
+              const userStats = await prisma.user.findUnique({
+                where: { id: player.dbId },
+                select: { xp: true }
+              });
+              const newXP = (userStats?.xp || 0) + xpGained;
+              const newLevel = Math.floor(Math.sqrt(newXP / 50)) + 1;
+
+              await Promise.all([
+                  prisma.raceResult.create({
+                    data: {
+                      wpm: parseFloat(wpm),
+                      accuracy: parseFloat(accuracy || 100),
+                      userId: player.dbId
+                    }
+                  }),
+                  prisma.user.update({
+                      where: { id: player.dbId },
+                      data: {
+                        xp: newXP,
+                        level: newLevel
+                      }
+                  })
+              ]);
+            } catch (err) {
+              console.error('[Race] Stat sync error:', err);
+            }
+          })();
         }
       }
 

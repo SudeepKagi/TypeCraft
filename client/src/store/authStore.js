@@ -34,10 +34,12 @@ const useAuthStore = create((set, get) => ({
       
       const data = await res.json();
       if (data.authenticated) {
+        const user = data.user;
+        const correctLevel = Math.floor(Math.sqrt((user.xp || 0) / 50)) + 1;
         set({ 
-          user: data.user, 
+          user: { ...user, level: correctLevel }, 
           isAuthenticated: true, 
-          userId: data.user.id,
+          userId: user.id,
           onboardingCompleted: data.onboardingCompleted 
         });
       } else {

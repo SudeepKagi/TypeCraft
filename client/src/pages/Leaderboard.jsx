@@ -84,9 +84,7 @@ const Leaderboard = () => {
             </div>
             
             <div className="flex bg-neutral-900/50 p-1 rounded-xl border border-neutral-800/50">
-              <button className="px-6 py-2 text-xs font-mono font-bold bg-primary text-on-primary rounded-lg transition-all shadow-teal-glow">Global</button>
-              <button className="px-6 py-2 text-xs font-mono text-neutral-500 hover:text-neutral-300 transition-all">Friends</button>
-              <button className="px-6 py-2 text-xs font-mono text-neutral-500 hover:text-neutral-300 transition-all">This Week</button>
+              <button className="px-6 py-2 text-xs font-mono font-bold bg-primary text-on-primary rounded-lg transition-all shadow-teal-glow uppercase tracking-wider">Global Standing</button>
             </div>
           </div>
 
