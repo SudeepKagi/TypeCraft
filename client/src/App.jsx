@@ -26,11 +26,12 @@ const ProtectedRoute = ({ children, requireOnboarding = true }) => {
   const [hasToasted, setHasToasted] = React.useState(false);
 
   React.useEffect(() => {
-    if (!isAuthenticated && !hasToasted) {
+    // Only show toast if we are NOT on the landing page and not already toasted
+    if (!isAuthenticated && !hasToasted && location.pathname !== '/') {
       addToast('Authentication Required. Please sign in to access this page.', 'error');
       setHasToasted(true);
     }
-  }, [isAuthenticated, addToast, hasToasted]);
+  }, [isAuthenticated, addToast, hasToasted, location.pathname]);
 
   if (!isAuthenticated) return <Navigate to="/" state={{ from: location }} />;
   if (requireOnboarding && !onboardingCompleted) return <Navigate to="/onboarding" />;
