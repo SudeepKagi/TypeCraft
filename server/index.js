@@ -11,6 +11,11 @@ const raceHandler = require('./src/handlers/raceHandler');
 const app = express();
 const server = http.createServer(app);
 
+// Trust proxy for secure cookies in production (Render/Vercel)
+if (process.env.NODE_ENV === 'production') {
+  app.set('trust proxy', 1);
+}
+
 const prisma = new PrismaClient();
 const frontendUrl = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 
