@@ -2,8 +2,21 @@ import React from 'react';
 import { PageWrapper } from '../components/layout/PageWrapper';
 import { Logo } from '../components/ui/Logo';
 import { API_BASE_URL } from '../lib/constants';
+import { useLocation } from 'react-router-dom';
+import { useToaster } from '../components/ui/Toaster';
 
 const Auth = () => {
+  const location = useLocation();
+  const { addToast } = useToaster();
+  const queryParams = new URLSearchParams(location.search);
+  const error = queryParams.get('error');
+
+  React.useEffect(() => {
+    if (error) {
+      addToast('Authentication failed. Please try again.', 'error');
+    }
+  }, [error, addToast]);
+
   const handleLogin = (provider) => {
     // Redirect browser to server auth entry point
     window.location.href = `${API_BASE_URL}/auth/${provider}`;

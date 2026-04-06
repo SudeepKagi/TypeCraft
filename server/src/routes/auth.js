@@ -21,8 +21,8 @@ module.exports = (prisma) => {
     }
   });
 
-  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
-  const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
+  const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+  const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:4000').replace(/\/$/, '');
 
   // ========== GOOGLE STRATEGY ==========
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
@@ -134,29 +134,31 @@ module.exports = (prisma) => {
   }
 
   // ========== DEV LOGIN BYPASS ==========
-  router.get('/dev-login', async (req, res) => {
-    try {
-      // Find or create dev user
-      let user = await prisma.user.upsert({
-        where: { email: 'dev@typecraft.local' },
-        update: { onboardingCompleted: true },
-        create: {
-          email: 'dev@typecraft.local',
-          username: 'TypeMaster_Dev',
-          avatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
-          onboardingCompleted: true
-        }
-      });
+  if (process.env.NODE_ENV !== 'production') {
+    router.get('/dev-login', async (req, res) => {
+      try {
+        // Find or create dev user
+        let user = await prisma.user.upsert({
+          where: { email: 'dev@typecraft.local' },
+          update: { onboardingCompleted: true },
+          create: {
+            email: 'dev@typecraft.local',
+            username: 'TypeMaster_Dev',
+            avatarUrl: 'https://avatars.githubusercontent.com/u/1?v=4',
+            onboardingCompleted: true
+          }
+        });
 
-      req.login(user, (err) => {
-        if (err) return res.status(500).json({ error: 'Dev Login failed' });
-        res.redirect('http://localhost:5173/dashboard');
-      });
-    } catch (error) {
-      console.error('Dev Login Error:', error);
-      res.status(500).send('Internal Server Error');
-    }
-  });
+        req.login(user, (err) => {
+          if (err) return res.status(500).json({ error: 'Dev Login failed' });
+          res.redirect(`${FRONTEND_URL}/dashboard`);
+        });
+      } catch (error) {
+        console.error('Dev Login Error:', error);
+        res.status(500).send('Internal Server Error');
+      }
+    });
+  }
 
   // ========== AUTH STATE ==========
   router.get('/me', (req, res) => {

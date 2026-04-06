@@ -39,10 +39,12 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'fallback-secret',
   resave: false,
   saveUninitialized: false,
+  proxy: process.env.NODE_ENV === 'production', // Trust reverse proxy for HTTPS
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Use 'lax' for local dev to avoid secure requirements
-    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+    httpOnly: true
   }
 }));
 

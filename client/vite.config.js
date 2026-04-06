@@ -16,5 +16,21 @@ export default defineConfig({
         ws: true
       }
     }
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (id.includes('node_modules')) {
+            if (id.includes('react')) return 'vendor-react';
+            if (id.includes('framer-motion')) return 'vendor-motion';
+            if (id.includes('lucide-react')) return 'vendor-lucide';
+            if (id.includes('recharts')) return 'vendor-charts';
+            return 'vendor';
+          }
+        }
+      }
+    },
+    chunkSizeWarningLimit: 1000
   }
 })
