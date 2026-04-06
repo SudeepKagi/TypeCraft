@@ -47,7 +47,7 @@ app.use(session({
   proxy: process.env.NODE_ENV === 'production', // Trust reverse proxy for HTTPS
   cookie: {
     secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'lax', // Use 'lax' even in prod because it is now "first-party" via proxy
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     httpOnly: true
   }

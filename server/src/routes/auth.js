@@ -24,12 +24,17 @@ module.exports = (prisma) => {
   const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
   const BACKEND_URL = (process.env.BACKEND_URL || 'http://localhost:4000').replace(/\/$/, '');
 
+  // Prioritize the Vercel/Frontend domain for callbacks to ensure cookies are first-party
+  const OAUTH_CALLBACK_BASE = (FRONTEND_URL && !FRONTEND_URL.includes('localhost'))
+    ? FRONTEND_URL 
+    : BACKEND_URL;
+
   // ========== GOOGLE STRATEGY ==========
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     passport.use(new GoogleStrategy({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: `${BACKEND_URL}/auth/google/callback`
+      callbackURL: `${OAUTH_CALLBACK_BASE}/auth/google/callback`
     }, async (accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails[0].value;
@@ -83,7 +88,7 @@ module.exports = (prisma) => {
     passport.use(new GitHubStrategy({
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: `${BACKEND_URL}/auth/github/callback`,
+      callbackURL: `${OAUTH_CALLBACK_BASE}/auth/github/callback`,
       scope: ['user:email']
     }, async (accessToken, refreshToken, profile, done) => {
       try {
