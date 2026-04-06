@@ -1,5 +1,6 @@
 import React from 'react';
 import { PageWrapper } from '../components/layout/PageWrapper';
+import { Logo } from '../components/ui/Logo';
 
 const Auth = () => {
   const handleLogin = (provider) => {
@@ -15,13 +16,21 @@ const Auth = () => {
         <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-primary-container/10 rounded-full blur-[120px] pointer-events-none"></div>
 
         <div className="w-full max-w-md space-y-8 relative z-10">
-          <div className="text-center space-y-2">
-            <h1 className="text-4xl md:text-5xl font-syne font-black tracking-tight text-on-surface uppercase italic">
-              User Sign In
-            </h1>
-            <p className="text-on-surface-variant font-mono text-xs uppercase tracking-[0.2em]">
-              Secure Identity Verification
-            </p>
+          <div className="text-center space-y-6">
+            <div className="flex justify-center mb-4">
+              <div className="relative group">
+                <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full group-hover:bg-primary/30 transition-all duration-700" />
+                <Logo size={64} className="relative z-10" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h1 className="text-4xl md:text-5xl font-heading font-black tracking-tight text-on-surface uppercase italic">
+                User Sign In
+              </h1>
+              <p className="text-on-surface-variant font-mono text-xs uppercase tracking-[0.2em]">
+                Secure Identity Verification
+              </p>
+            </div>
           </div>
 
           <div className="bg-surface-container-low border border-outline-variant/20 p-8 rounded-2xl shadow-2xl backdrop-blur-xl space-y-6">

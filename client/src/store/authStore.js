@@ -22,9 +22,15 @@ const useAuthStore = create((set, get) => ({
 
   initializeAuth: async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      
       const res = await fetch('http://localhost:4000/auth/me', {
-        credentials: 'include'
+        credentials: 'include',
+        signal: controller.signal
       });
+      clearTimeout(timeoutId);
+      
       const data = await res.json();
       if (data.authenticated) {
         set({ 
@@ -37,7 +43,8 @@ const useAuthStore = create((set, get) => ({
         set({ user: null, isAuthenticated: false, userId: null, onboardingCompleted: false });
       }
     } catch (err) {
-      console.error('Auth initialization failed:', err);
+      console.error('Auth initialization failed or timed out:', err);
+      set({ user: null, isAuthenticated: false, userId: null, onboardingCompleted: false });
     } finally {
       set({ isInitialized: true });
     }

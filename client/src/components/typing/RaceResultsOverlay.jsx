@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Logo } from '../ui/Logo';
 
 const RaceResultsOverlay = ({ players, wpm, accuracy, xp, onReLobby, onExit }) => {
   useEffect(() => {
@@ -31,18 +32,23 @@ const RaceResultsOverlay = ({ players, wpm, accuracy, xp, onReLobby, onExit }) =
         {/* Left Side: Performance & Rank */}
         <div className="flex-1 text-center md:text-left">
           <div className="mb-8">
-            <h2 className="font-syne font-black text-4xl md:text-6xl text-neutral-100 tracking-tighter leading-none mb-2 uppercase">Race Results</h2>
-            <div className="w-16 h-1.5 bg-primary rounded-full mb-6" />
-            <p className="font-mono text-xs text-neutral-500 uppercase tracking-[0.4em]">Race Session Complete</p>
+            <div className="flex items-center gap-4 mb-6">
+              <Logo size={48} />
+              <div>
+                <h2 className="font-heading font-black text-4xl md:text-6xl text-neutral-100 tracking-tighter leading-none mb-1 uppercase">Race Results</h2>
+                <p className="font-mono text-[10px] text-primary uppercase tracking-[0.4em] opacity-60">Protocol Session Complete</p>
+              </div>
+            </div>
+            <div className="w-16 h-1 bg-primary/20 rounded-full mb-8" />
           </div>
 
           <div className="grid grid-cols-2 gap-8 mb-12">
             <div className="flex flex-col overflow-hidden">
-              <span className="text-5xl md:text-6xl font-syne font-black text-primary truncate tracking-tighter">{wpm}</span>
+              <span className="text-5xl md:text-6xl font-heading font-black text-primary truncate tracking-tighter">{wpm}</span>
               <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest">Words Per Minute</span>
             </div>
             <div className="flex flex-col overflow-hidden">
-              <span className="text-5xl md:text-6xl font-syne font-black text-neutral-100 truncate tracking-tighter">{accuracy}<span className="text-2xl text-neutral-600">%</span></span>
+              <span className="text-5xl md:text-6xl font-heading font-black text-neutral-100 truncate tracking-tighter">{accuracy}<span className="text-2xl text-neutral-600">%</span></span>
               <span className="text-[9px] font-mono text-neutral-500 uppercase tracking-widest">Accuracy Rate</span>
             </div>
           </div>
@@ -50,17 +56,17 @@ const RaceResultsOverlay = ({ players, wpm, accuracy, xp, onReLobby, onExit }) =
           <div className="bg-primary/5 border border-primary/20 rounded-2xl p-6 flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="h-12 w-12 rounded-full bg-primary/20 flex items-center justify-center">
-                <span className="text-2xl font-syne font-black text-primary">{myRank}</span>
+                <span className="text-2xl font-heading font-black text-primary">{myRank}</span>
               </div>
               <div>
-                <h3 className="text-xl font-syne font-black text-neutral-100 italic uppercase">
+                <h3 className="text-xl font-heading font-black text-neutral-100 italic uppercase">
                   {myRank}{rankSuffix(myRank)} PLACE
                 </h3>
-                <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">Final Placement</p>
+                <p className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest">Ending Room Session</p>
               </div>
             </div>
             <div className="text-right">
-              <span className="text-2xl font-syne font-black text-primary animate-pulse">+{xp} XP Gained</span>
+              <span className="text-2xl font-heading font-black text-primary animate-pulse">+{xp} XP Gained</span>
             </div>
           </div>
         </div>
@@ -88,7 +94,7 @@ const RaceResultsOverlay = ({ players, wpm, accuracy, xp, onReLobby, onExit }) =
           <div className="mt-8 flex flex-col gap-3">
             <button 
               onClick={onReLobby}
-              className="w-full py-4 bg-primary text-neutral-900 font-syne font-black text-sm uppercase tracking-widest rounded-xl hover:bg-emerald-400 transition-all shadow-teal-glow active:scale-95"
+              className="w-full py-4 bg-primary text-neutral-900 font-heading font-black text-sm uppercase tracking-widest rounded-xl hover:bg-emerald-400 transition-all shadow-teal-glow active:scale-95"
             >
               RETURN TO LOBBY
             </button>

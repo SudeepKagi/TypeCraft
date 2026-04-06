@@ -3,6 +3,7 @@ import { PageWrapper } from '../components/layout/PageWrapper';
 import { WordDisplay } from '../components/typing/WordDisplay';
 import { useTyping } from '../hooks/useTyping';
 import useAuthStore from '../store/authStore';
+import { Logo } from '../components/ui/Logo';
 
 const Trainer = () => {
   const [weakness, setWeakness] = useState('');
@@ -20,35 +21,15 @@ const Trainer = () => {
   
   const addXP = useAuthStore(state => state.addXP);
 
-  // Handle saving results
-  useEffect(() => {
-    if (status === 'finished' && userId && passage) {
-      fetch('http://localhost:4000/api/results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          wpm: currentWPM,
-          accuracy,
-          mode: 'trainer',
-          keystrokes
-        })
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (data.xpGained) {
-          addXP(data.xpGained);
-        }
-      })
-      .catch(err => console.error('Failed to save trainer result:', err));
-    }
-  }, [status, userId, passage, currentWPM, accuracy, addXP]);
+  const generationTimerRef = React.useRef(null);
+  const isRegenerating = React.useRef(false);
 
-  const handleGenerate = async () => {
-    if (!weakness.trim()) return;
+  const handleGenerate = React.useCallback(async (isAuto = false) => {
+    if (!weakness.trim() || isRegenerating.current) return;
+    
+    isRegenerating.current = true;
     setLoading(true);
     setError(null);
-    setPassage(''); 
     try {
       const response = await fetch('http://localhost:4000/api/ai/train', {
         method: 'POST',
@@ -72,8 +53,48 @@ const Trainer = () => {
       setError("AI Generation failed. Check local GEMINI_API_KEY in server/.env");
     } finally {
       setLoading(false);
+      isRegenerating.current = false;
     }
-  };
+  }, [weakness, reset]);
+
+  const handleGenerateRef = React.useRef(handleGenerate);
+  useEffect(() => {
+    handleGenerateRef.current = handleGenerate;
+  }, [handleGenerate]);
+
+  // 1. Handle saving results once when finished
+  useEffect(() => {
+    if (status === 'finished' && passage && userId) {
+      fetch('http://localhost:4000/api/results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          wpm: currentWPM,
+          accuracy,
+          mode: 'trainer',
+          keystrokes
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.xpGained) {
+          addXP(data.xpGained);
+        }
+      })
+      .catch(err => console.error('Failed to save trainer result:', err));
+    }
+  }, [status === 'finished']);
+
+  // 2. Handle auto-regeneration delay with stable ref
+  useEffect(() => {
+    if (status === 'finished') {
+       const timer = setTimeout(() => {
+         handleGenerateRef.current(true);
+       }, 2000); 
+       return () => clearTimeout(timer);
+    }
+  }, [status]); // ONLY depend on status change to trigger once
 
   const handleHeatmapSync = async () => {
       if (!userId) return;
@@ -108,8 +129,9 @@ const Trainer = () => {
     <PageWrapper>
       <main className="pt-32 pb-20 px-6 max-w-4xl mx-auto min-h-screen flex flex-col items-center">
         
-        <div className="text-center mb-12">
-           <h1 className="text-4xl md:text-7xl font-syne font-black text-neutral-100 tracking-tighter uppercase shadow-glow-primary">AI Trainer</h1>
+        <div className="text-center mb-12 flex flex-col items-center">
+           <Logo size={64} className="mb-6 opacity-80" />
+           <h1 className="text-5xl md:text-[100px] brutal-heading text-neutral-100 shadow-glow-primary">AI Trainer</h1>
            <p className="text-sm text-neutral-400 font-inter mt-4 max-w-md mx-auto">
              Target your weakest keybinds. Our AI engine generates custom passages to build targeted muscle memory.
            </p>
@@ -117,14 +139,14 @@ const Trainer = () => {
 
         {/* Input Configuration Panel */}
         {!isRacing && !passage && (
-          <div className="w-full max-w-2xl custom-glass p-8 rounded-2xl border border-primary/20 bg-neutral-900/50 shadow-teal-glow">
-            <h2 className="text-xs uppercase font-inter text-primary tracking-widest font-bold mb-6 flex items-center gap-2">
+          <div className="w-full max-w-2xl custom-glass p-8 rounded-2xl border border-primary/20 bg-neutral-900/50 shadow-teal-glow text-left">
+            <h2 className="tech-label mb-6 flex items-center gap-2">
                <span className="material-symbols-outlined text-[14px]">psychology</span> Target Weakness
             </h2>
             
             <div className="space-y-6 flex flex-col">
                <div className="space-y-2">
-                 <label className="text-xs text-neutral-400 font-mono uppercase tracking-widest">Problematic Characters (e.g., "; q z [ ]")</label>
+                 <label className="tech-label opacity-40">Problematic Characters (e.g., "; q z [ ]")</label>
                   <div className="flex gap-2">
                     <input 
                        type="text" 
@@ -149,7 +171,7 @@ const Trainer = () => {
                <button 
                  onClick={handleGenerate}
                  disabled={loading || !weakness.trim()}
-                 className={`w-full py-4 rounded-lg font-syne font-black text-lg tracking-wider uppercase transition-all duration-300 ${
+                 className={`w-full py-4 rounded-lg font-heading font-black text-lg tracking-wider uppercase transition-all duration-300 ${
                     loading || !weakness.trim() 
                      ? 'bg-neutral-800 text-neutral-600 cursor-not-allowed'
                      : 'bg-primary text-on-primary hover:bg-emerald-400 shadow-teal-glow'
@@ -172,13 +194,13 @@ const Trainer = () => {
           <div className="w-full mt-8 fade-in">
              
              {/* Stats Display */}
-             <div className="w-full flex justify-between items-end mb-6 border-b border-neutral-900 pb-4">
-                <div className="flex items-center gap-3">
-                   <div className="w-3 h-3 rounded-full bg-primary shadow-glow-primary animate-pulse"></div>
-                   <span className="font-mono text-xs text-primary font-bold tracking-widest uppercase">Active Training</span>
-                </div>
-                
-                <div className="flex gap-8">
+              <div className="w-full flex flex-col md:flex-row justify-between items-center md:items-end gap-6 mb-6 border-b border-neutral-900 pb-4">
+                 <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-primary shadow-glow-primary animate-pulse"></div>
+                    <span className="font-mono text-xs text-primary font-bold tracking-widest uppercase">Active Training</span>
+                 </div>
+                 
+                 <div className="flex gap-6 md:gap-8 justify-center w-full md:w-auto">
                    <div className="flex flex-col items-end">
                      <span className="text-[10px] text-neutral-500 font-inter uppercase tracking-widest text-right w-full">Coverage</span>
                      <span className={`font-mono text-xs font-bold leading-7 ${isSaturated ? 'text-primary' : 'text-yellow-500'}`}>
@@ -190,19 +212,19 @@ const Trainer = () => {
                      <>
                        <div className="flex flex-col items-end">
                          <span className="text-[10px] text-neutral-500 font-inter uppercase tracking-widest">WPM</span>
-                         <span className="font-syne font-black text-2xl text-primary">{Math.floor(currentWPM)}</span>
+                         <span className="font-heading font-black text-2xl text-primary">{Math.floor(currentWPM)}</span>
                        </div>
                        <div className="flex flex-col items-end">
                          <span className="text-[10px] text-neutral-500 font-inter uppercase tracking-widest">Accuracy</span>
-                         <span className="font-syne font-black text-2xl text-neutral-100">{accuracy.toFixed(1)}%</span>
+                         <span className="font-heading font-black text-2xl text-neutral-100">{accuracy.toFixed(1)}%</span>
                        </div>
                      </>
                    )}
                 </div>
              </div>
 
-             {/* Typing Component */}
-              <div className={`relative custom-glass p-8 rounded-xl border transition-all duration-500 mb-8 min-h-[160px] ${isTimeWarpActive ? 'border-primary/50 shadow-teal-glow translate-y-[-2px]' : 'border-neutral-800/80'}`}>
+              {/* Typing Component */}
+              <div className={`relative custom-glass p-8 rounded-xl border transition-all duration-500 mb-8 min-h-[160px] overflow-hidden ${isTimeWarpActive ? 'border-primary/50 shadow-teal-glow translate-y-[-2px]' : 'border-neutral-800/80'}`}>
                  <WordDisplay 
                    words={words} 
                    currentWordIndex={currentWordIndex} 
@@ -210,6 +232,24 @@ const Trainer = () => {
                    status={status} 
                    isTimeWarpActive={isTimeWarpActive}
                  />
+
+                 {/* Regeneration Overlay */}
+                 {status === 'finished' && (
+                    <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-neutral-950/80 backdrop-blur-md animate-fade-in">
+                       <div className="flex flex-col items-center gap-4">
+                          <div className="relative w-12 h-12">
+                             <div className="absolute inset-0 border-2 border-primary/20 rounded-full"></div>
+                             <div className="absolute inset-0 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                          <div className="flex flex-col items-center">
+                             <span className="text-primary font-mono text-[10px] uppercase tracking-[0.3em] animate-pulse">Neural Recalibration</span>
+                             <h3 className="text-xl font-heading font-black text-white uppercase tracking-wider mt-1">
+                                {loading ? 'Compiling Passage...' : 'Next Routine in 2s'}
+                             </h3>
+                          </div>
+                       </div>
+                    </div>
+                 )}
               </div>
 
               {/* Analysis Insights */}

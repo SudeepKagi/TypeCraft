@@ -9,14 +9,19 @@
   --primary: #1D9E75;
   --primary-glow: rgba(29, 158, 117, 0.4);
   --primary-transparent: rgba(29, 158, 117, 0.1);
+  
+  --font-heading: "Unbounded", sans-serif;
+  --font-mono: "Space Mono", monospace;
+  --font-body: "Inter", sans-serif;
 }
 
 @layer base {
   body {
     background-color: #0A0A0A;
-    font-family: 'Inter', sans-serif;
+    font-family: var(--font-body);
     color: #F0F0F0;
     overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
   }
 }
 
@@ -87,6 +92,29 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Brutalist Industrial Typography */
+  .brutal-heading {
+    font-family: var(--font-heading);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.04em;
+    line-height: 0.9;
+  }
+
+  .tech-label {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--primary);
+    opacity: 0.8;
+  }
+
+  .font-heading { font-family: var(--font-heading); }
+  .font-mono { font-family: var(--font-mono); }
+  .font-body { font-family: var(--font-body); }
 }
 
 @keyframes blink {
@@ -118,3 +146,58 @@
   -webkit-text-fill-color: transparent;
 }
 
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(200%); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseRing {
+  0% { transform: scale(1); opacity: 0.2; }
+  50% { transform: scale(1.1); opacity: 0.4; }
+  100% { transform: scale(1.2); opacity: 0; }
+}
+
+@keyframes scanline {
+  0% { transform: translateY(-100%); }
+  100% { transform: translateY(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite ease-in-out;
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.6s ease-out forwards;
+}
+
+.animate-pulse-ring {
+  animation: pulseRing 3s infinite;
+}
+
+.animate-scanline {
+  animation: scanline 8s linear infinite;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0A0A0A;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1E1E1E;
+  border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}

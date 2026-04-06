@@ -1,336 +1,750 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { PageWrapper } from '../components/layout/PageWrapper';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { 
+  motion, 
+  AnimatePresence, 
+  useInView, 
+  useSpring, 
+  useMotionValue 
+} from 'framer-motion';
+import { Link, useNavigate } from 'react-router-dom';
+import { 
+  Trophy, 
+  Flame, 
+  BarChart, 
+  Code2, 
+  BrainCircuit, 
+  Flag, 
+  ChevronDown, 
+  Github, 
+  Twitter, 
+  MessageSquare,
+  Zap,
+  ChevronRight
+} from 'lucide-react';
+import Particles, { initParticlesEngine } from "@tsparticles/react";
+import { loadSlim } from "@tsparticles/slim";
 import useAuthStore from '../store/authStore';
+import { PageWrapper } from '../components/layout/PageWrapper';
+import { Logo } from '../components/ui/Logo';
+
+// --- CUSTOM HOOKS ---
+
+const useMagnetic = (multiplier = 1) => {
+  const ref = useRef(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+  const springConfig = { damping: 25, stiffness: 200 };
+  const springX = useSpring(x, springConfig);
+  const springY = useSpring(y, springConfig);
+
+  const handleMouseMove = (e) => {
+    if (!ref.current) return;
+    try {
+        const { clientX, clientY } = e;
+        const { left, top, width, height } = ref.current.getBoundingClientRect();
+        const centerX = left + width / 2;
+        const centerY = top + height / 2;
+        const distanceX = clientX - centerX;
+        const distanceY = clientY - centerY;
+        
+        const maxShift = 12 * multiplier;
+        const moveX = (distanceX / (width / 2)) * maxShift;
+        const moveY = (distanceY / (height / 2)) * maxShift;
+        
+        x.set(moveX);
+        y.set(moveY);
+    } catch (err) {
+        // Silently fail if calculation errors occur
+    }
+  };
+
+  const handleMouseLeave = () => {
+    x.set(0);
+    y.set(0);
+  };
+
+  return { ref, x: springX, y: springY, handleMouseMove, handleMouseLeave };
+};
+
+// --- COMPONENTS ---
+
+const MagneticButton = ({ children, className = "", onClick, type = "primary" }) => {
+  const { ref, x, y, handleMouseMove, handleMouseLeave } = useMagnetic();
+  
+  const baseStyles = "relative px-8 py-4 rounded-xl font-heading font-black uppercase tracking-widest transition-shadow duration-300 flex items-center gap-2 z-10 select-none overflow-hidden hover:scale-[1.02] active:scale-[0.98]";
+  const typeStyles = type === "primary" 
+    ? "bg-[#1D9E75] text-white shadow-[0_0_20px_rgba(29,158,117,0.2)]"
+    : "border border-[#1D9E75] text-[#1D9E75]";
+
+  return (
+    <motion.button
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{ x, y }}
+      className={`${baseStyles} ${typeStyles} ${className}`}
+      onClick={onClick}
+    >
+      <div className="relative z-20 flex items-center gap-2">
+        {children}
+      </div>
+    </motion.button>
+  );
+};
+
+const AutoTypingDemo = () => {
+  const demoText = "The quick brown fox jumps over the lazy dog. Type at the speed of thought with TypeCraft. Master your muscle memory.";
+  const [index, setIndex] = useState(0);
+  const [wpm, setWpm] = useState(0);
+
+  useEffect(() => {
+    let active = true;
+    const typingInterval = setInterval(() => {
+        if (!active) return;
+        setIndex((prev) => (prev + 1) % (demoText.length + 1));
+    }, 75);
+
+    const wpmInterval = setInterval(() => {
+        if (!active) return;
+        setWpm((prev) => prev < 84 ? prev + 1 : 84);
+    }, 100);
+
+    return () => {
+        active = false;
+        clearInterval(typingInterval);
+        clearInterval(wpmInterval);
+    };
+  }, []);
+
+  return (
+    <div className="relative w-full max-w-3xl mx-auto mt-16 p-8 rounded-xl border border-[#1E1E1E] bg-white/[0.03] backdrop-blur-[10px] shadow-2xl">
+      <div className="font-mono text-xl md:text-2xl leading-relaxed min-h-[120px] text-left text-[#444444]">
+        {demoText.split("").map((char, i) => {
+          let color = "#444444";
+          if (i < index) color = "#F0F0F0";
+          if (i === index) color = "#1D9E75";
+          
+          return (
+            <span key={i} style={{ color }} className="relative transition-colors duration-100">
+              {char}
+              {i === index && (
+                <span className="absolute left-0 bottom-[-2px] w-[2px] h-[1.2em] bg-[#1D9E75] animate-caret-pulse translate-y-[0.1em]"></span>
+              )}
+            </span>
+          );
+        })}
+      </div>
+      <div className="mt-8 pt-6 border-t border-white/5 flex items-center justify-between">
+        <div className="flex flex-col items-start text-left">
+          <span className="tech-label opacity-60">Room Status</span>
+          <span className="text-sm font-heading text-[#F0F0F0] font-black uppercase">OPTIMIZED_STREAM</span>
+        </div>
+        <div className="text-right">
+          <span className="tech-label opacity-60">Average Speed</span>
+          <div className="text-3xl font-heading text-[#1D9E75] font-black italic">{wpm} <span className="text-xs">WPM</span></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const StatCard = ({ value, label, delay = 0 }) => {
+    const ref = useRef(null);
+    const inView = useInView(ref, { once: true, margin: "-100px" });
+    
+    return (
+        <motion.div 
+            ref={ref}
+            initial={{ opacity: 0, y: 20 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.8, delay }}
+            className="flex-1 min-w-[240px] p-8 bg-[#111111] hover:bg-[#161616] border-l-2 border-[#1D9E75]/20 hover:border-[#1D9E75] transition-all duration-300 group text-left"
+        >
+            <div className="text-[32px] font-heading font-black text-[#1D9E75] mb-1">
+                {value}
+            </div>
+            <div className="tech-label opacity-60 group-hover:opacity-100 transition-opacity">{label}</div>
+        </motion.div>
+    );
+}
+
+const FeatureCard = ({ icon: Icon, title, desc, index }) => {
+    const ref = useRef(null);
+    const inView = useInView(ref, { once: true, margin: "-100px" });
+
+    return (
+        <motion.div
+            ref={ref}
+            initial={{ opacity: 0, y: 30 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.5, delay: index * 0.08 }}
+            className="p-8 rounded-xl border border-[#1E1E1E] bg-white/[0.03] backdrop-blur-[10px] hover:border-[#1D9E75]/40 hover:shadow-[inset_0_0_30px_rgba(29,158,117,0.04)] transition-all duration-300 h-full group text-left flex flex-col"
+        >
+            <div className="w-12 h-12 rounded-lg bg-[#1D9E75]/10 flex items-center justify-center text-[#1D9E75] mb-6 group-hover:scale-110 transition-transform duration-300">
+                {Icon && <Icon size={24} />}
+            </div>
+            <h3 className="text-xl font-heading font-black uppercase text-[#F0F0F0] mb-3 tracking-tight leading-none">{title}</h3>
+            <p className="text-[#888888] text-sm leading-relaxed">{desc}</p>
+        </motion.div>
+    );
+};
+
+const Step = ({ number, title, desc, index }) => {
+    const ref = useRef(null);
+    const inView = useInView(ref, { once: true, margin: "-100px" });
+
+    return (
+        <motion.div 
+            ref={ref}
+            initial={{ opacity: 0, x: -20 }}
+            animate={inView ? { opacity: 1, x: 0 } : {}}
+            transition={{ duration: 0.5, delay: index * 0.15 }}
+            className="flex-1 relative text-left"
+        >
+            <div className="mb-6 flex items-center">
+                <div className="w-12 h-12 rounded-full bg-[#1D9E75] flex items-center justify-center text-white font-heading font-black text-lg shadow-[0_0_20px_rgba(29,158,117,0.3)]">
+                    {number}
+                </div>
+                {index < 2 && (
+                    <div className="hidden md:block flex-1 h-[2px] border-t-2 border-dashed border-[#1D9E75]/20 ml-4 mr-0"></div>
+                )}
+            </div>
+            <h4 className="text-xl brutal-heading text-[#F0F0F0] mb-2">{title}</h4>
+            <p className="text-[#888888] text-sm leading-relaxed max-w-[240px]">{desc}</p>
+        </motion.div>
+    );
+};
 
 const Landing = () => {
   const navigate = useNavigate();
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated);
-  
-  const handleModeNavigate = (type = 'race') => {
-    if (!isAuthenticated) {
-      handleLogin('google');
-      return;
-    }
-    navigate(`/race?type=${type}`);
-  };
-  
-  const handleLogin = (provider) => {
-    window.location.href = `http://localhost:4000/auth/${provider}`;
-  };
+  const [init, setInit] = useState(false);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: { 
-      opacity: 1,
-      transition: { staggerChildren: 0.1, delayChildren: 0.2 }
-    }
-  };
+  useEffect(() => {
+    let active = true;
+    initParticlesEngine(async (engine) => {
+        try {
+            await loadSlim(engine);
+        } catch (e) {
+            console.error("Particles init failed", e);
+        }
+    }).then(() => {
+      if (active) setInit(true);
+    });
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: { 
-      opacity: 1, 
-      y: 0,
-      transition: { duration: 0.6, ease: "easeOut" }
-    }
-  };
+    return () => { active = false; };
+  }, []);
+
+  const headlineLines = [
+    "Type at the",
+    "speed of",
+    "thought"
+  ];
+
+  const totalLetters = headlineLines.join("").length;
+  let letterCount = 0; // Global counter for consistent stagger delay
+
+  const particlesOptions = useMemo(() => ({
+    background: { color: { value: "transparent" } },
+    fpsLimit: 60,
+    particles: {
+      color: { value: "#1D9E75" },
+      links: { enable: false },
+      move: { enable: false },
+      number: {
+        density: { enable: true, area: 800 },
+        value: 40,
+      },
+      opacity: { value: 0.1 },
+      shape: { type: "circle" },
+      size: { value: { min: 1, max: 2 } },
+    },
+    detectRetina: true,
+  }), []);
 
   return (
-    <PageWrapper>
-      <div className="min-h-screen relative overflow-hidden bg-black text-white font-inter">
-        {/* Visual Ambience */}
-        <div className="absolute top-0 left-0 w-full h-[800px] bg-[radial-gradient(circle_at_30%_20%,rgba(34,211,238,0.08)_0%,transparent_60%)] pointer-events-none"></div>
-        <div className="absolute bottom-0 right-0 w-full h-[800px] bg-[radial-gradient(circle_at_70%_80%,rgba(34,211,238,0.05)_0%,transparent_60%)] pointer-events-none"></div>
-        <div className="dot-overlay absolute inset-0 opacity-10"></div>
-
-        <motion.main 
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="relative z-10"
-        >
-          {/* HERO SECTION */}
-          <section className="pt-32 pb-24 px-8 max-w-7xl mx-auto flex flex-col items-center text-center">
-            <motion.div variants={itemVariants} className="inline-flex items-center space-x-3 px-4 py-1.5 glass-card rounded-full border border-primary/20 bg-primary/5 mb-8">
-              <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-primary font-mono">TypeCraft_System_v.2.4</span>
-            </motion.div>
-
-            <motion.h1 
-              variants={itemVariants}
-              className="text-5xl md:text-8xl font-syne leading-[0.9] tracking-tighter uppercase italic max-w-5xl"
-            >
-              Compete. Improve. <br />
-              <span className="text-primary italic drop-shadow-[0_0_30px_rgba(29,158,117,0.4)]">Master.</span>
-            </motion.h1>
-
-            <motion.p 
-              variants={itemVariants} 
-              className="mt-8 text-lg md:text-xl text-neutral-400 max-w-2xl font-medium leading-relaxed"
-            >
-              The world's most precise typing engine designed for high-performance training. Experience professional-grade analytics and world-class competition.
-            </motion.p>
-
-            <motion.div variants={itemVariants} className="flex flex-wrap gap-5 pt-10 justify-center">
-              {!isAuthenticated ? (
-                <div className="flex gap-4 flex-wrap justify-center">
-                  <button 
-                    onClick={() => handleLogin('google')}
-                    className="px-8 py-4 bg-white text-neutral-900 font-syne rounded-xl hover:scale-[1.05] transition-all flex items-center gap-3 active:scale-95 shadow-glow-sm"
-                  >
-                    <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" alt="Google" className="w-5 h-5" />
-                    Sign In with Google
-                  </button>
-                  <button 
-                    onClick={() => handleLogin('github')}
-                    className="px-8 py-4 bg-neutral-900 text-white border border-white/10 font-syne rounded-xl hover:scale-[1.05] transition-all flex items-center gap-3 active:scale-95"
-                  >
-                    <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.43.372.823 1.102.823 2.222 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 21.795 24 17.295 24 12c0-6.627-5.373-12-12-12"/></svg>
-                    Continue with GitHub
-                  </button>
-                </div>
-              ) : (
-                <button 
-                  onClick={() => window.location.href = '/dashboard'}
-                  className="px-10 py-5 bg-primary text-neutral-900 font-syne rounded-xl shadow-teal-glow hover:scale-[1.05] transition-all uppercase tracking-widest active:scale-95"
+    <PageWrapper hideNav={true}>
+      <div className="bg-[#0A0A0A] text-[#F0F0F0] font-inter selection:bg-[#1D9E75]/30 selection:text-[#1D9E75] min-h-screen relative overflow-x-hidden">
+        
+        {/* --- HERO SECTION --- */}
+        <section className="relative min-h-screen flex flex-col items-center justify-center pt-24 px-8 overflow-hidden z-10">
+            {init && (
+                <Particles
+                    id="tsparticles"
+                    options={particlesOptions}
+                    className="absolute inset-0 z-0 pointer-events-none"
+                />
+            )}
+            
+            <div className="relative z-10 text-center max-w-5xl mx-auto flex flex-col items-center">
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.8, ease: "easeOut" }}
+                  className="border border-[#1D9E75]/30 bg-[#1D9E75]/10 text-[#1D9E75] text-[11px] font-mono tracking-[4px] uppercase px-4 py-2 rounded-full mb-8 z-10"
                 >
-                  Enter Dashboard
-                </button>
-              )}
-            </motion.div>
-          </section>
+                  ● NEURAL ROOM ACTIVATED
+                </motion.div>
 
-          {/* ENGINE TECHNICALS */}
-          <section className="py-24 px-8 max-w-7xl mx-auto border-t border-white/5">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-              <motion.div variants={itemVariants} className="space-y-8">
-                <h2 className="text-4xl font-syne font-black uppercase italic text-white tracking-widest">
-                  Performance <br />
-                  <span className="text-primary italic">Engine.</span>
-                </h2>
-                <p className="text-neutral-400 leading-relaxed text-lg font-medium">
-                  Built on a professional binary protocol, TypeCraft delivers 0.02ms input-to-render latency. Our engine ensures your rhythm remains unbroken with high-fidelity performance tracking.
-                </p>
-                <div className="space-y-4">
-                  {[
-                    "Raw Data Stream Transmission",
-                    "High-Fidelity Rendering Optimization",
-                    "Advanced Character Analytics"
-                  ].map((tech, i) => (
-                    <div key={i} className="flex items-center gap-3 text-sm font-mono text-neutral-300">
-                      <span className="material-symbols-outlined text-primary text-xl">check_circle</span>
-                      {tech}
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-              <motion.div variants={itemVariants} className="relative group">
-                <div className="absolute -inset-4 bg-primary/20 rounded-3xl blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                <div className="glass-card p-1 rounded-2xl border border-white/10 overflow-hidden shadow-2xl relative bg-black/80">
-                  <div className="aspect-[4/3] bg-neutral-900/50 rounded-[14px] p-8 flex flex-col justify-center">
-                     <div className="flex justify-between items-center mb-8">
-                        <div className="text-[10px] font-mono text-primary uppercase tracking-[0.2em]">PERFORMANCE_METRIC :: 0.02ms</div>
-                        <div className="flex gap-2">
-                           <div className="w-2 h-2 rounded-full bg-neutral-700"></div>
-                           <div className="w-2 h-2 rounded-full bg-neutral-600"></div>
-                           <div className="w-2 h-2 rounded-full bg-neutral-500"></div>
-                        </div>
-                     </div>
-                     <div className="space-y-4">
-                        <div className="h-2 w-3/4 bg-neutral-800 rounded-full overflow-hidden">
-                           <motion.div 
-                             initial={{ width: 0 }}
-                             whileInView={{ width: "80%" }}
-                             transition={{ duration: 2, repeat: Infinity, repeatType: "reverse" }}
-                             className="h-full bg-primary"
-                           ></motion.div>
-                        </div>
-                        <div className="h-2 w-1/2 bg-neutral-800 rounded-full"></div>
-                        <div className="h-2 w-2/3 bg-neutral-800 rounded-full"></div>
-                     </div>
-                     <div className="mt-12 flex items-center justify-between">
-                        <span className="font-syne text-5xl font-black text-white italic">148<span className="text-xs font-mono text-neutral-500 uppercase ml-2">WPM</span></span>
-                        <div className="text-right">
-                           <div className="text-[8px] font-mono text-neutral-600 uppercase tracking-widest leading-none">LATENCY_MS</div>
-                           <div className="text-xl font-mono font-bold text-primary italic">0.02ms</div>
-                        </div>
-                     </div>
-                  </div>
-                </div>
-              </motion.div>
-            </div>
-          </section>
+                <motion.div 
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.8, ease: "easeOut", delay: 0.2 }}
+                    className="relative group mb-12"
+                >
+                    <div className="absolute inset-[-20px] bg-[#1D9E75]/10 blur-[40px] rounded-full group-hover:bg-[#1D9E75]/20 transition-all duration-1000" />
+                    <Logo size={120} className="relative z-10" />
+                </motion.div>
 
-          {/* COMPETITIVE PLAY */}
-          <section className="py-32 px-8 max-w-7xl mx-auto bg-[#050505] relative overflow-hidden">
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-[600px] bg-primary/2 blur-[100px] pointer-events-none"></div>
-            <div className="relative z-10 text-center mb-20">
-               <h2 className="text-4xl font-syne font-black uppercase italic text-white mb-4">Competitive Play</h2>
-               <p className="text-neutral-500 text-sm font-medium uppercase tracking-[0.2em]">Race against the clock or against the world's best.</p>
+                <motion.h1 
+                    className="text-4xl sm:text-5xl md:text-[120px] brutal-heading mb-8 flex flex-col items-center"
+                    initial="hidden"
+                    animate="visible"
+                >
+                    {headlineLines.map((line, lineIndex) => (
+                      <div key={lineIndex} className="flex flex-wrap justify-center">
+                        {line.split("").map((char, charIndex) => {
+                          const i = letterCount++;
+                          return (
+                            <motion.span
+                                key={`${lineIndex}-${charIndex}`}
+                                variants={{
+                                    hidden: { opacity: 0, y: 40 },
+                                    visible: { opacity: 1, y: 0 }
+                                }}
+                                transition={{ duration: 0.6, delay: 0.4 + i * 0.04, ease: [0.22, 1, 0.36, 1] }}
+                                className="inline-block"
+                            >
+                                {char === " " ? "\u00A0" : char}
+                            </motion.span>
+                          );
+                        })}
+                      </div>
+                    ))}
+                </motion.h1>
+
+                <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 0.6 }}
+                    transition={{ duration: 0.4, delay: 0.4 + totalLetters * 0.04 + 0.4 }}
+                    className="text-[#F0F0F0] text-lg md:text-xl max-w-2xl mx-auto mb-12 font-medium"
+                >
+                    The next evolution of competitive typing. Ultra-low latency input, neural training sessions, and global professional rankings.
+                </motion.p>
+
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.4 + totalLetters * 0.04 + 0.8 }}
+                    className="flex flex-col md:flex-row items-center justify-center gap-6"
+                >
+                    <MagneticButton onClick={() => navigate('/auth')}>
+                        Start Typing <Zap size={18} fill="currentColor" />
+                    </MagneticButton>
+                </motion.div>
+
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.8, delay: 0.4 + totalLetters * 0.04 + 1.2 }}
+                >
+                    <AutoTypingDemo />
+                </motion.div>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: -20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    duration: 2, 
+                    repeat: Infinity, 
+                    ease: "easeInOut",
+                    delay: 0.4 + totalLetters * 0.04 + 2
+                  }}
+                  className="mt-16 text-[#444444] hover:text-[#1D9E75] transition-colors cursor-pointer"
+                >
+                  <ChevronDown size={32} />
+                </motion.div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        </section>
+
+        {/* --- STATS SECTION --- */}
+        <section className="relative z-10 w-full bg-[#111111] border-y border-[#1E1E1E] py-16">
+            <div className="max-w-7xl mx-auto px-8 flex flex-wrap gap-0">
+                <StatCard value="2.4M" label="Races Run" delay={0.1} />
+                <StatCard value="142 WPM" label="All-time Record" delay={0.2} />
+                <StatCard value="48K" label="Online Now" delay={0.3} />
+                <StatCard value="99.9%" label="Input Accuracy" delay={0.4} />
+            </div>
+        </section>
+
+        {/* --- FEATURES SECTION --- */}
+        <section className="py-32 px-8 max-w-7xl mx-auto relative z-10" id="features">
+            <div className="text-left mb-20 space-y-4">
+                <span className="text-[#1D9E75] text-xs font-mono tracking-widest block mb-4">// CORE_MODULES</span>
+                <h2 className="text-4xl md:text-7xl brutal-heading text-left">Everything you need to type better</h2>
+                <p className="text-[#888888] text-lg font-medium tech-label !tracking-normal text-left">Engineered for perfection, built for speed.</p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {[
+                    { icon: Flag, title: "Multiplayer Race", desc: "Compete with typists worldwide in real-time lobbies with zero-latency synchronization." },
+                    { icon: BrainCircuit, title: "AI Trainer", desc: "Our neural algorithms analyze your key-press stability and generate custom drills." },
+                    { icon: Code2, title: "Code Mode", desc: "Master syntax with our specialized code snippet library across 20+ programming languages." },
+                    { icon: BarChart, title: "Analytics", desc: "Deep performance insights, heatmaps, and burst-speed frequency analysis." },
+                    { icon: Flame, title: "Streak System", desc: "Build momentum with daily sessions and unlock limited-edition professional badges." },
+                    { icon: Trophy, title: "Tournament Room", desc: "Join official Pro Series brackets every weekend for massive XP rewards and ranking." }
+                ].map((feature, i) => (
+                    <FeatureCard key={i} {...feature} index={i} />
+                ))}
+            </div>
+
+            {/* MARQUEE TICKER */}
+            <div className="w-screen relative left-1/2 right-1/2 -ml-[50vw] -mr-[50vw] bg-[#111111] border-y border-[#1E1E1E] py-4 mt-24 overflow-hidden">
+                <div className="flex whitespace-nowrap animate-marquee">
+                    {[1, 2].map((loop) => (
+                      <div key={loop} className="flex items-center">
+                        {[
+                          "MULTIPLAYER RACE", "AI TRAINER", "CODE MODE", "GLOBAL RANKINGS", 
+                          "STREAK SYSTEM", "TOURNAMENTS", "NEURAL TRAINING", "REAL-TIME SYNC"
+                        ].map((item, i) => (
+                          <div key={i} className="flex items-center px-8">
+                            <span className="font-mono text-xs text-[#444444] uppercase tracking-[4px]">{item}</span>
+                            <span className="text-[#1D9E75] ml-16">●</span>
+                          </div>
+                        ))}
+                      </div>
+                    ))}
+                </div>
+            </div>
+        </section>
+
+        {/* --- HOW IT WORKS --- */}
+        <section className="py-32 bg-[#050505] border-y border-[#1E1E1E] relative z-10">
+            <div className="max-w-7xl mx-auto px-8">
+                <div className="text-left mb-20">
+                    <span className="text-[#1D9E75] text-xs font-mono tracking-widest block mb-4">// ROOM_INIT</span>
+                    <h2 className="text-4xl md:text-5xl font-heading font-black tracking-tight brutal-heading uppercase">Get started in seconds</h2>
+                </div>
+
+                <div className="flex flex-col md:flex-row gap-16 md:gap-8">
+                    <Step number="1" title="Create your account" desc="Sign up instantly with Google or GitHub and initialize your profile." index={0} />
+                    <Step number="2" title="Take your first test" desc="Complete a 15-second baseline test to calibrate your starting rank." index={1} />
+                    <Step number="3" title="Race and improve" desc="Join high-stakes races, train daily, and climb the global leaderboards." index={2} />
+                </div>
+            </div>
+        </section>
+
+        {/* --- SPEED SHOWCASE SECTION --- */}
+        <section className="py-32 px-8 relative z-10 overflow-hidden">
+          <div className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[600px] h-[600px] bg-[#1D9E75]/5 rounded-full blur-[100px] pointer-events-none" />
+          
+          <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+            {/* Left: Text */}
+            <div className="space-y-8 text-left">
+              <span className="text-[#1D9E75] text-xs font-mono tracking-widest">// PERFORMANCE_METRICS</span>
+              <h2 className="text-5xl md:text-7xl brutal-heading leading-none uppercase">
+                YOUR WEAKNESS.<br/>
+                <span className="text-[#1D9E75]">OUR TARGET.</span>
+              </h2>
+              <p className="text-[#888888] text-lg leading-relaxed max-w-md">
+                TypeCraft's neural AI maps every keystroke error, finds your worst bigrams, and generates custom passages engineered to destroy your weak spots.
+              </p>
+              <ul className="space-y-4">
+                {[
+                  "Identifies your top 10 error bigrams in real time",
+                  "Generates AI passages targeting your weak keys",
+                  "Tracks improvement per session with delta scores",
+                  "Heatmap shows exactly which fingers slow you down"
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-3 text-[#888888] text-sm">
+                    <span className="text-[#1D9E75] mt-0.5 flex-shrink-0">→</span>
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <MagneticButton onClick={() => navigate('/train')}>
+                Start AI Training
+              </MagneticButton>
+            </div>
+
+            {/* Right: Keyboard Heatmap Visual */}
+            <div className="p-8 rounded-xl border border-[#1E1E1E] bg-white/[0.02] space-y-3 z-10">
+              <div className="text-[10px] font-mono text-[#888888] tracking-widest uppercase mb-6 flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-[#1D9E75] animate-pulse" />
+                KEYSTROKE_HEATMAP — LIVE SESSION
+              </div>
+              {[
+                ['Q','W','E','R','T','Y','U','I','O','P'],
+                ['A','S','D','F','G','H','J','K','L'],
+                ['Z','X','C','V','B','N','M']
+              ].map((row, ri) => (
+                <div key={ri} className={`flex gap-1 md:gap-2 justify-center ${ri === 1 ? 'ml-2 md:ml-4' : ri === 2 ? 'ml-4 md:ml-8' : ''}`}>
+                  {row.map((key, ki) => {
+                    const heatColors = [
+                      '#1D9E75','#2aad82','#63991A',
+                      '#EF9F27','#e07820','#E24B4A',
+                      '#1D9E75','#63991A','#EF9F27','#E24B4A'
+                    ];
+                    const color = heatColors[(ri * 4 + ki) % heatColors.length];
+                    return (
+                      <div key={ki} 
+                        className="w-7 h-7 sm:w-9 sm:h-9 md:w-11 md:h-11 rounded-md flex items-center justify-center text-[9px] md:text-[11px] font-mono font-bold transition-all duration-300 hover:scale-110 cursor-default border border-white/5"
+                        style={{ 
+                          backgroundColor: color + '20',
+                          color: color,
+                          borderColor: color + '40'
+                        }}>
+                        {key}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              <div className="pt-4 border-t border-[#1E1E1E] flex justify-between text-[10px] font-mono text-[#888888] tracking-wider">
+                <span className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-sm bg-[#1D9E75]/30 inline-block" />
+                  ACCURATE
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-sm bg-[#EF9F27]/30 inline-block" />
+                  SLOW
+                </span>
+                <span className="flex items-center gap-2">
+                  <span className="w-3 h-3 rounded-sm bg-[#E24B4A]/30 inline-block" />
+                  ERROR ZONE
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* --- LEADERBOARD SECTION --- */}
+        <section className="py-32 px-8 max-w-5xl mx-auto relative z-10">
+            <div className="text-center mb-16 space-y-4">
+                <span className="text-[#1D9E75] text-xs font-mono tracking-widest block mb-4 uppercase">// GLOBAL_SENSING</span>
+                <div className="flex flex-col items-center gap-4">
+                  <h2 className="text-4xl md:text-6xl brutal-heading uppercase">See where you rank</h2>
+                  <span className="flex items-center gap-2 text-xs font-mono text-[#888888]">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" /> LIVE
+                  </span>
+                </div>
+            </div>
+
+            <div className="rounded-xl border border-[#1E1E1E] bg-white/[0.02] overflow-x-auto shadow-2xl custom-scrollbar">
+                <table className="w-full text-left font-mono min-w-[600px] md:min-w-0">
+                    <thead className="bg-[#111111] border-b border-[#1E1E1E]">
+                        <tr>
+                            {['Rank', 'User', 'WPM', 'Accuracy', 'Tests'].map(h => (
+                                <th key={h} className="px-6 py-4 text-[10px] uppercase text-[#888888] tracking-widest">{h}</th>
+                            ))}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {[
+                            { rank: 1, name: "NeonSpirit", wpm: 148, acc: 99.8, tests: 2405, color: "border-amber-400", change: "↑ +2", changeType: "up" },
+                            { rank: 2, name: "Cypher_X", wpm: 142, acc: 99.2, tests: 1842, color: "border-neutral-400", change: "↑ +1", changeType: "up" },
+                            { rank: 3, name: "Zenith", wpm: 139, acc: 98.9, tests: 3102, color: "border-orange-400", change: "↑ +3", changeType: "up" },
+                            { rank: 4, name: "Room_9", wpm: 135, acc: 99.5, tests: 942, color: "border-transparent", change: "↓ -1", changeType: "down" },
+                            { rank: 5, name: "Bit_Runner", wpm: 131, acc: 97.4, tests: 1205, color: "border-transparent", change: "↓ -1", changeType: "down" }
+                        ].map((user, i) => (
+                            <motion.tr 
+                                key={i}
+                                initial={{ opacity: 0, y: 10 }}
+                                whileInView={{ opacity: 1, y: 0 }}
+                                viewport={{ once: true, margin: "-20px" }}
+                                transition={{ duration: 0.3, delay: i * 0.06 }}
+                                className={`border-b border-white/5 hover:bg-white/[0.03] transition-colors border-l-4 ${user.color}`}
+                            >
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-4">
+                                    <span>{user.rank === 1 ? '🥇' : user.rank === 2 ? '🥈' : user.rank === 3 ? '🥉' : user.rank}</span>
+                                    <span className={`text-[10px] font-mono px-2 py-0.5 rounded ${user.changeType === 'up' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                      {user.change}
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-[#1D9E75]/20 border border-white/10 flex items-center justify-center font-heading font-black text-[10px]">
+                                            {user.name.charAt(0)}
+                                        </div>
+                                        <span className="font-heading font-black uppercase text-[#F0F0F0]">{user.name}</span>
+                                    </div>
+                                </td>
+                                <td className="px-6 py-4 text-[#1D9E75] font-bold">{user.wpm}</td>
+                                <td className="px-6 py-4 text-[#888888]">{user.acc}%</td>
+                                <td className="px-6 py-4 text-[#444444]">{user.tests}</td>
+                            </motion.tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            <div className="mt-12 text-center">
+                <MagneticButton type="ghost" onClick={() => navigate('/auth')}>
+                    View Full Leaderboard
+                </MagneticButton>
+            </div>
+        </section>
+
+        {/* --- TESTIMONIALS SECTION --- */}
+        <section className="py-32 px-8 bg-[#050505] border-y border-[#1E1E1E] relative z-10">
+          <div className="max-w-7xl mx-auto">
+            <div className="text-center mb-16 space-y-3">
+              <span className="text-[#1D9E75] text-xs font-mono tracking-widest block mb-4">// FIELD_REPORTS</span>
+              <h2 className="text-4xl md:text-6xl brutal-heading uppercase">
+                WHAT TYPISTS SAY
+              </h2>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               {[
                 { 
-                  id: "sprints", 
-                  title: "1v1 Sprints", 
-                  desc: "Head-to-head battles with real-time performance tracking. No distractions, just pure speed and focus.",
-                  brief: "PRIVATE_LOBBY // ROOM_CODES",
-                  btn: "Join Lobby",
-                  action: () => handleModeNavigate('race')
+                  quote: "Went from 87 WPM to 134 WPM in 3 weeks. The AI trainer found patterns I never noticed.", 
+                  name: "NeonSpirit", 
+                  stat: "↑ 47 WPM",
+                  seed: "neon"
                 },
                 { 
-                  id: "pro", 
-                  title: "Pro Series", 
-                  desc: "Official weekly tournaments with massive XP rewards and global professional rankings.",
-                  brief: "4-PLAYER_QUORUM // 2.5X_XP",
-                  btn: "Register Now",
-                  action: () => handleModeNavigate('tournament')
+                  quote: "The race mode is insanely competitive. Nothing motivates you like losing to someone typing 150 WPM.", 
+                  name: "Cypher_X", 
+                  stat: "148 WPM PB",
+                  seed: "cypher"
                 },
                 { 
-                  id: "raids", 
-                  title: "Team Challenges", 
-                  desc: "Group challenges where collective accuracy determines global achievement multipliers.",
-                  brief: "SHARED_GOAL // 400_WPM",
-                  btn: "Find a Team",
-                  action: () => handleModeNavigate('raid')
+                  quote: "Keyboard heatmap alone is worth it. I had no idea I was dropping 6% of my E keys.", 
+                  name: "Zenith", 
+                  stat: "99.2% ACC",
+                  seed: "zenith"
                 }
-              ].map((mode, i) => (
-                <motion.div 
-                  key={mode.id}
-                  variants={itemVariants}
-                  whileHover={{ y: -10, borderColor: "rgba(34,211,238,0.2)" }}
-                  className="glass-card p-8 rounded-2xl border border-white/5 flex flex-col justify-between group transition-all cursor-pointer relative overflow-hidden"
-                  onClick={mode.action}
+              ].map((t, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.5, delay: i * 0.1 }}
+                  className="p-8 rounded-xl border border-[#1E1E1E] bg-white/[0.02] hover:border-[#1D9E75]/30 transition-all duration-300 flex flex-col gap-6 text-left"
                 >
-                  <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                     <span className="text-[8px] font-mono text-primary font-bold tracking-widest bg-primary/10 px-2 py-1 rounded">
-                        {mode.brief}
-                     </span>
-                  </div>
-                  <div>
-                    <h3 className="text-xl font-syne font-black text-white italic uppercase tracking-tighter mb-4 group-hover:text-primary transition-colors">{mode.title}</h3>
-                    <p className="text-neutral-500 text-sm leading-relaxed font-medium mb-8 italic">{mode.desc}</p>
-                  </div>
-                  <div className="flex items-center gap-2 text-[10px] font-mono font-bold text-primary uppercase tracking-widest group-hover:translate-x-2 transition-transform">
-                    {mode.btn} <span className="material-symbols-outlined text-sm">arrow_forward</span>
+                  <p className="text-[#888888] text-sm leading-relaxed italic flex-1">"{t.quote}"</p>
+                  <div className="flex items-center justify-between pt-4 border-t border-[#1E1E1E]">
+                    <div className="flex items-center gap-3">
+                      <img 
+                        src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${t.seed}`}
+                        className="w-8 h-8 rounded-full bg-[#1D9E75]/20 border border-white/10"
+                        alt={t.name}
+                      />
+                      <span className="font-mono text-sm font-bold text-[#F0F0F0] uppercase">
+                        {t.name}
+                      </span>
+                    </div>
+                    <span className="text-[#1D9E75] text-xs font-mono font-bold bg-[#1D9E75]/10 px-3 py-1 rounded-full text-nowrap">
+                      {t.stat}
+                    </span>
                   </div>
                 </motion.div>
               ))}
             </div>
-          </section>
-
-          {/* MASTER THE CRAFT */}
-          <section className="py-24 px-8 max-w-7xl mx-auto">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
-               <motion.div variants={itemVariants} className="order-2 lg:order-1 glass-card p-10 rounded-2xl border border-white/5 relative overflow-hidden">
-                  <div className="grid grid-cols-8 gap-2">
-                     {Array.from({ length: 32 }).map((_, i) => (
-                        <div 
-                          key={i} 
-                          className={`aspect-square rounded-sm transition-colors duration-500 ${i % 3 === 0 ? 'bg-primary/40 shadow-[0_0_8px_rgba(34,211,238,0.2)]' : 'bg-neutral-900 border border-white/5'}`}
-                        ></div>
-                     ))}
-                  </div>
-                  <div className="mt-8 flex justify-between items-end">
-                     <div>
-                        <div className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest mb-1">Finger_Heatmap</div>
-                        <div className="text-xs font-mono text-primary font-bold italic">Stability: 98.4%</div>
-                     </div>
-                     <div className="text-right">
-                        <div className="text-[8px] font-mono text-neutral-600 uppercase mb-1">Live_Status</div>
-                        <div className="w-16 h-1.5 bg-neutral-900 rounded-full overflow-hidden">
-                           <div className="w-2/3 h-full bg-primary"></div>
-                        </div>
-                     </div>
-                  </div>
-               </motion.div>
-               <motion.div variants={itemVariants} className="order-1 lg:order-2 space-y-6">
-                  <h2 className="text-4xl font-syne font-black uppercase italic text-white tracking-widest">Master <br />The Craft.</h2>
-                  <p className="text-neutral-400 leading-relaxed font-medium">Our AI engine analyzes every keystroke to identify your "weak links." It dynamically generates training drills focused on your specific productivity bottlenecks.</p>
-                  <div className="space-y-6 pt-4">
-                    <div>
-                       <h4 className="text-white font-syne font-bold uppercase italic text-sm mb-1 tracking-widest">Heatmap Analysis</h4>
-                       <p className="text-neutral-500 text-sm font-medium">See exactly which fingers are slowing you down with key-by-key pressure maps and latency tracking.</p>
-                    </div>
-                    <div>
-                       <h4 className="text-white font-syne font-bold uppercase italic text-sm mb-1 tracking-widest">Dynamic Pacing</h4>
-                       <p className="text-neutral-500 text-sm font-medium">The engine adjusts difficulty in real-time to keep you perfectly in the "flow state" for maximum professional growth.</p>
-                    </div>
-                  </div>
-               </motion.div>
-            </div>
-          </section>
-
-          {/* SOCIAL PROOF QUOTE */}
-          <section className="py-32 px-8 max-w-5xl mx-auto text-center border-b border-white/5">
-             <motion.div variants={itemVariants} className="space-y-10">
-                <span className="material-symbols-outlined text-6xl text-primary/40 block">format_quote</span>
-                <h2 className="text-2xl md:text-4xl font-syne font-black italic text-neutral-200 leading-tight tracking-tight">
-                  "TypeCraft isn't just a trainer, it's a professional instrument. The sheer precision of the tracking engine is miles ahead of anything else I've ever used for technical skill development."
-                </h2>
-                <div className="flex flex-col items-center">
-                   <div className="w-12 h-12 rounded-full border border-primary/40 p-0.5 bg-neutral-900 mb-3">
-                      <div className="w-full h-full rounded-full bg-primary/20 flex items-center justify-center font-black text-primary font-syne italic text-lg">P</div>
-                   </div>
-                   <span className="text-[10px] font-mono text-primary uppercase font-bold tracking-[0.3em]">Professional Analyst // Top 0.1% Typist</span>
-                </div>
-             </motion.div>
-          </section>
-
-          {/* FOOTER */}
-          <footer className="pt-24 pb-12 px-8 max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-12 border-t border-white/5 mt-20">
-            <div className="col-span-2 lg:col-span-1 space-y-6">
-              <h3 className="font-syne font-black text-2xl tracking-tighter text-white">TYPECRAFT</h3>
-              <p className="text-neutral-600 text-xs font-mono font-medium leading-relaxed uppercase">The world's highest performance typing engine. Precision-engineered for professional development and high-speed skill acquisition.</p>
-              <div className="flex gap-4">
-                 <div className="w-8 h-8 rounded bg-neutral-900 border border-white/5"></div>
-                 <div className="w-8 h-8 rounded bg-neutral-900 border border-white/5"></div>
-                 <div className="w-8 h-8 rounded bg-neutral-900 border border-white/5"></div>
-              </div>
-            </div>
-            <div>
-               <h5 className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest font-bold mb-6">Product</h5>
-               <ul className="space-y-3 font-mono text-[10px] text-neutral-600 uppercase font-bold">
-                 <li><button className="hover:text-primary transition-colors">Typing Engine</button></li>
-                 <li><button className="hover:text-primary transition-colors">AI Trainer</button></li>
-                 <li><button className="hover:text-primary transition-colors">Pro Mode</button></li>
-                 <li><button className="hover:text-primary transition-colors">Tournaments</button></li>
-               </ul>
-            </div>
-            <div>
-               <h5 className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest font-bold mb-6">Community</h5>
-               <ul className="space-y-3 font-mono text-[10px] text-neutral-600 uppercase font-bold">
-                 <li><button className="hover:text-primary transition-colors">Leaderboards</button></li>
-                 <li><button className="hover:text-primary transition-colors">Discord Server</button></li>
-                 <li><button className="hover:text-primary transition-colors">Badges & Ranks</button></li>
-                 <li><button className="hover:text-primary transition-colors">Teams</button></li>
-               </ul>
-            </div>
-            <div>
-               <h5 className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest font-bold mb-6">Resources</h5>
-               <ul className="space-y-3 font-mono text-[10px] text-neutral-600 uppercase font-bold">
-                 <li><button className="hover:text-primary transition-colors">Documentation</button></li>
-                 <li><button className="hover:text-primary transition-colors">Latency Report</button></li>
-                 <li><button className="hover:text-primary transition-colors">Developer API</button></li>
-                 <li><button className="hover:text-primary transition-colors">Status</button></li>
-               </ul>
-            </div>
-            <div>
-               <h5 className="text-[10px] font-mono text-neutral-500 uppercase tracking-widest font-bold mb-6">Company</h5>
-               <ul className="space-y-3 font-mono text-[10px] text-neutral-600 uppercase font-bold">
-                 <li><button className="hover:text-primary transition-colors">About Us</button></li>
-                 <li><button className="hover:text-primary transition-colors">Privacy Policy</button></li>
-                 <li><button className="hover:text-primary transition-colors">Terms of Service</button></li>
-                 <li><button className="hover:text-primary transition-colors">Contact</button></li>
-               </ul>
-            </div>
-          </footer>
-          <div className="py-8 text-center text-neutral-800 text-[8px] font-mono uppercase tracking-[0.5em] border-t border-white/5 mx-8">
-            © 2026 TypeCraft Typing Systems
           </div>
-        </motion.main>
+        </section>
+
+        {/* --- CTA BANNER --- */}
+        <section className="py-40 relative overflow-hidden bg-[#111111] border-y border-white/5 z-10">
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-[#1D9E75]/10 rounded-full blur-[120px] pointer-events-none"></div>
+            
+            <div className="relative z-10 max-w-4xl mx-auto px-8 text-center space-y-10">
+                <h2 className="text-5xl md:text-[120px] brutal-heading leading-none uppercase">Ready to type faster?</h2>
+                
+                <div className="flex flex-wrap items-center justify-center gap-4 text-[#888888] text-xs font-mono tracking-widest uppercase">
+                  <span>48K TYPISTS</span>
+                  <span className="text-[#1D9E75]">●</span>
+                  <span>142 WPM RECORD</span>
+                  <span className="text-[#1D9E75]">●</span>
+                  <span>FREE FOREVER</span>
+                </div>
+
+                <div className="flex justify-center pt-4">
+                    <div className="relative group">
+                        <div className="absolute inset-0 bg-[#1D9E75] rounded-xl blur-2xl opacity-20 group-hover:opacity-40 transition-opacity animate-pulse-ring"></div>
+                        <MagneticButton 
+                            className="!px-12 !py-6 !text-lg !rounded-xl"
+                            onClick={() => navigate('/auth')}>
+                            Start for Free
+                        </MagneticButton>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        {/* --- FOOTER --- */}
+        <footer className="bg-[#0A0A0A] pt-24 pb-12 px-8 border-t border-[#1E1E1E] relative z-10">
+            <div className="max-w-7xl mx-auto px-4">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-20 items-center">
+                    <div className="lg:col-span-4 space-y-6 text-left">
+                        <Link to="/" className="flex items-center gap-2">
+                            <Logo size={40} />
+                            <span className="text-2xl font-heading font-black tracking-tighter uppercase">TypeCraft</span>
+                        </Link>
+                        <p className="text-[#888888] text-sm leading-relaxed font-medium">
+                            The ultimate arena for competitive typing athletes. Race harder. Train smarter. Break the sound barrier.
+                        </p>
+                        <div className="flex gap-4">
+                            <a href="#" className="p-2 bg-white/[0.03] border border-white/5 rounded-lg text-[#444444] hover:text-[#1D9E75] transition-colors"><Twitter size={20} /></a>
+                            <a href="#" className="p-2 bg-white/[0.03] border border-white/5 rounded-lg text-[#444444] hover:text-[#1D9E75] transition-colors"><Github size={20} /></a>
+                            <a href="#" className="p-2 bg-white/[0.03] border border-white/5 rounded-lg text-[#444444] hover:text-[#1D9E75] transition-colors"><MessageSquare size={20} /></a>
+                        </div>
+                    </div>
+
+                    <div className="lg:col-span-8 bg-[#111111] p-4 md:p-10 rounded-2xl border border-[#1E1E1E] overflow-hidden shadow-2xl relative group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-[#1D9E75]/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+                        <div className="text-[10px] font-mono text-[#888888] uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <span className="flex h-2 w-2 rounded-full bg-red-500 animate-pulse"></span>
+                            ROOM_QUICK_TEST
+                        </div>
+                        <div className="font-mono text-lg text-[#F0F0F0]/40 leading-relaxed italic cursor-pointer group-hover:text-[#F0F0F0]/60 transition-colors">
+                            The world belongs to the efficient. Type fast, think faster. This is your training ground for excellence.
+                        </div>
+                        <div className="mt-4 flex justify-end">
+                            <span className="text-xs font-mono text-[#1D9E75] font-bold">Resync session to start typing →</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="pt-8 border-t border-[#1E1E1E] flex flex-col md:flex-row justify-between items-center gap-4">
+                    <p className="text-[#444444] text-[12px] font-medium tracking-tight">© 2025 TypeCraft. Built for typists. All systems active.</p>
+                    <div className="flex gap-8">
+                        <a href="#" className="text-[#444444] text-[12px] hover:text-[#888888] transition-colors">Privacy</a>
+                        <a href="#" className="text-[#444444] text-[12px] hover:text-[#888888] transition-colors">Terms</a>
+                        <a href="#" className="text-[#444444] text-[12px] hover:text-[#888888] transition-colors">Status</a>
+                    </div>
+                </div>
+            </div>
+        </footer>
+
+        {/* --- GLOBAL CSS --- */}
+        <style dangerouslySetInnerHTML={{ __html: `
+            @keyframes caret-pulse {
+                0%, 100% { opacity: 1; }
+                50% { opacity: 0; }
+            }
+            .animate-caret-pulse {
+                animation: caret-pulse 1s infinite steps(1);
+            }
+            @keyframes pulse-ring {
+                0% { transform: scale(1); opacity: 0.2; }
+                50% { transform: scale(1.1); opacity: 0.4; }
+                100% { transform: scale(1.2); opacity: 0; }
+            }
+            .animate-pulse-ring {
+                animation: pulse-ring 3s infinite;
+            }
+            @keyframes marquee {
+              from { transform: translateX(0); }
+              to { transform: translateX(-50%); }
+            }
+            .animate-marquee {
+              animation: marquee 30s linear infinite;
+            }
+        ` }} />
+
       </div>
     </PageWrapper>
   );

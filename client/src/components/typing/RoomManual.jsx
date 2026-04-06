@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-export const ProtocolManual = ({ isOpen, onClose, defaultTab = 'sprints' }) => {
+export const RoomManual = ({ isOpen, onClose, defaultTab = 'sprints' }) => {
   const [activeTab, setActiveTab] = useState(defaultTab);
 
   const tabs = [
@@ -26,7 +26,7 @@ export const ProtocolManual = ({ isOpen, onClose, defaultTab = 'sprints' }) => {
       label: 'PRO SERIES', 
       icon: 'military_tech',
       content: {
-        title: "Tournament Protocol",
+        title: "Tournament Room",
         subtitle: "Quorum-Based Elite Matchmaking",
         rules: [
           "Matchmaking requires a 4-player quorum.",
@@ -35,22 +35,6 @@ export const ProtocolManual = ({ isOpen, onClose, defaultTab = 'sprints' }) => {
           "Proximity-based global rankings affected."
         ],
         stakes: "2.5x XP Multiplier"
-      }
-    },
-    { 
-      id: 'raid', 
-      label: 'SQUAD RAIDS', 
-      icon: 'hub',
-      content: {
-        title: "Encryption Wall Breach",
-        subtitle: "Collective Output Synchronization",
-        rules: [
-          "This is not a race against each other.",
-          "The target is the Encryption Wall (400 WPM).",
-          "Every keystroke from the squad depletes Boss Health.",
-          "Breach successful when Total WPM > 400."
-        ],
-        stakes: "1.2x Team XP + Victory Bonus"
       }
     }
   ];
@@ -68,12 +52,12 @@ export const ProtocolManual = ({ isOpen, onClose, defaultTab = 'sprints' }) => {
         >
           {/* Sidebar Tabs */}
           <div className="w-full md:w-64 bg-neutral-950 border-r border-white/5 p-6 flex flex-col gap-2">
-            <h2 className="font-syne font-black text-white text-xl italic uppercase tracking-tighter mb-8">Protocol Manual</h2>
+            <h2 className="brutal-heading !text-white !text-xl mb-8">Room Manual</h2>
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-3 px-4 py-4 rounded-lg transition-all text-xs font-mono tracking-widest uppercase text-left ${activeTab === tab.id ? 'bg-primary/20 text-primary border border-primary/20' : 'text-neutral-500 hover:text-neutral-300 hover:bg-white/5'}`}
+                className={`flex items-center gap-3 px-4 py-4 rounded-lg transition-all tech-label text-left ${activeTab === tab.id ? 'bg-primary/20 text-primary border border-primary/20' : 'text-neutral-500 hover:text-neutral-300 hover:bg-white/5'}`}
               >
                 <span className="material-symbols-outlined text-sm">{tab.icon}</span>
                 {tab.label}
@@ -84,7 +68,7 @@ export const ProtocolManual = ({ isOpen, onClose, defaultTab = 'sprints' }) => {
               className="mt-auto px-4 py-4 text-xs font-mono text-red-500 hover:text-red-400 uppercase tracking-widest flex items-center gap-2 group transition-all"
             >
                <span className="material-symbols-outlined text-sm group-hover:-translate-x-1 transition-transform">arrow_back</span>
-               Close Manual
+               <span className="tech-label">Close Manual</span>
             </button>
           </div>
 
@@ -96,7 +80,7 @@ export const ProtocolManual = ({ isOpen, onClose, defaultTab = 'sprints' }) => {
 
              <div className="relative z-10">
                 <div className="mb-10">
-                   <h1 className="text-4xl font-syne font-black text-white italic uppercase tracking-tighter leading-tight drop-shadow-sm">
+                   <h1 className="text-4xl font-heading font-black text-white italic uppercase tracking-tighter leading-tight drop-shadow-sm">
                       {tabs.find(t => t.id === activeTab).content.title}
                    </h1>
                    <p className="text-primary font-mono text-xs uppercase tracking-[0.3em] font-bold mt-2">

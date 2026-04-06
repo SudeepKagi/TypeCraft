@@ -1,32 +1,37 @@
 import { create } from 'zustand';
 
 const useRaceStore = create((set, get) => ({
-  roomCode: null,
-  roomType: 'private', // private, tournament, raid
-  players: [],
   status: 'idle', // idle, lobby, countdown, racing, finished
-  raidProgress: 0,
-  raidTarget: 0,
+  countdown: null,
+  passage: '',
+  players: [],
+  roomCode: null,
+  roomType: 'race', // race, tournament
   GhostRun: null,
   myDbId: null,
   
   setRoom: (roomCode) => set({ roomCode }),
   setPlayers: (players) => set({ players }),
-  updatePlayerProgress: (userId, progress, wpm) => set((state) => ({
-    players: state.players.map(p => p.id === userId ? { ...p, progress, wpm } : p)
-  })),
+  setCountdown: (countdown) => set({ countdown }),
+  setPassage: (passage) => set({ passage }),
   setStatus: (status) => set({ status }),
   setDbId: (myDbId) => set({ myDbId }),
   
-  // Actions that can be called upon receiving socket events
+  resetRoom: () => set({
+    roomCode: null,
+    roomType: 'race',
+    players: [],
+    status: 'idle',
+    countdown: null,
+    passage: ''
+  }),
+  
   handleRaceUpdate: (data) => {
     set((state) => ({
       roomCode: data.roomCode || state.roomCode,
       roomType: data.type || state.roomType,
       status: data.status,
-      players: data.players,
-      raidProgress: data.raidProgress || state.raidProgress,
-      raidTarget: data.raidTarget || state.raidTarget
+      players: data.players
     }));
   }
 }));

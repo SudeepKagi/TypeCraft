@@ -1,8 +1,6 @@
 const { generateRacePassage } = require('../data/passages');
 const rooms = {};
 const TOURNAMENT_QUORUM = 4;
-const RAID_TARGET_WPM = 400; // Total WPM goal for the squad
-
 
 const generateRoomCode = () => {
   return Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -13,11 +11,11 @@ const raceHandler = (io, socket, prisma) => {
   // Create a new race room
   socket.on('race:create', (data) => {
     const roomCode = generateRoomCode();
-    const { user } = data; // the user creating it
+    const { user } = data;
     
     rooms[roomCode] = {
       id: roomCode,
-      type: data.type || 'private', // private, tournament, raid
+      type: data.type || 'race', // race, tournament
       status: 'waiting', // waiting, countdown, racing, finished
       players: [
         {
@@ -31,13 +29,16 @@ const raceHandler = (io, socket, prisma) => {
           isFinished: false
         }
       ],
-      startTime: null,
-      raidProgress: 0 // Used for Squad Raids
+      startTime: null
     };
 
     socket.join(roomCode);
     
-    socket.emit('race:created', { roomCode, players: rooms[roomCode].players });
+    socket.emit('race:created', { 
+      roomCode, 
+      type: rooms[roomCode].type,
+      players: rooms[roomCode].players 
+    });
     console.log(`[Race] Room ${roomCode} created by ${user.username}`);
   });
 
@@ -52,12 +53,11 @@ const raceHandler = (io, socket, prisma) => {
       return socket.emit('race:error', 'Race already started');
     }
 
-    // Check if player already in room
     const existingPlayer = room.players.find(p => p.id === socket.id);
     if (!existingPlayer) {
       room.players.push({
         id: socket.id,
-        username: user.username + (room.players.length > 0 ? `_${room.players.length + 1}` : ''),
+        username: user.username,
         avatarUrl: user.avatarUrl,
         dbId: user.id || null,
         progress: 0,
@@ -72,11 +72,9 @@ const raceHandler = (io, socket, prisma) => {
       roomCode: roomCode,
       type: room.type,
       status: room.status, 
-      players: room.players,
-      raidTarget: RAID_TARGET_WPM
+      players: room.players
     });
     
-    // Auto-start Tournament if quorum reached
     if (room.type === 'tournament' && room.players.length >= TOURNAMENT_QUORUM && room.status === 'waiting') {
       startRaceCountdown(io, roomCode);
     }
@@ -113,7 +111,7 @@ const raceHandler = (io, socket, prisma) => {
     room.status = 'countdown';
     io.to(roomCode).emit('race:update', { status: 'countdown', players: room.players });
     
-    let count = 8; // Public tournaments get longer countdown
+    let count = 8;
     const interval = setInterval(() => {
       count -= 1;
       io.to(roomCode).emit('race:countdown', count);
@@ -134,7 +132,6 @@ const raceHandler = (io, socket, prisma) => {
     const room = rooms[roomCode];
     if (!room) return;
 
-    // Check if requester is host
     const player = room.players.find(p => p.id === socket.id);
     if (player && player.isHost && room.status === 'waiting') {
       room.status = 'countdown';
@@ -149,7 +146,7 @@ const raceHandler = (io, socket, prisma) => {
           clearInterval(interval);
           room.status = 'racing';
           room.startTime = Date.now();
-          const passage = generateRacePassage('quotes', 35); // Default quotes for races
+          const passage = generateRacePassage('quotes', 35);
           room.passage = passage;
           io.to(roomCode).emit('race:started', { startTime: room.startTime, passage: room.passage });
         }
@@ -170,10 +167,8 @@ const raceHandler = (io, socket, prisma) => {
       
       if (progress >= 100 && !player.isFinished) {
         player.isFinished = true;
-        // Save to DB and Award XP
         if (player.dbId) {
-          // XP Multipliers: Tournament (Competitive) = 2.5x, Raid (Collaborative) = 1.2x base + Team Bonus
-          const multiplier = room.type === 'tournament' ? 2.5 : (room.type === 'raid' ? 1.2 : 1.0);
+          const multiplier = room.type === 'tournament' ? 2.5 : 1.0;
           const xpGained = Math.max(1, Math.floor(parseFloat(wpm) * (parseFloat(accuracy || 100) / 100) * multiplier));
           
           Promise.all([
@@ -194,18 +189,6 @@ const raceHandler = (io, socket, prisma) => {
         }
       }
 
-      // RAID COLLECTIVE PROGRESS LOGIC
-      if (room.type === 'raid') {
-        const totalWpm = room.players.reduce((acc, p) => acc + (p.wpm || 0), 0);
-        room.raidProgress = totalWpm;
-        
-        if (totalWpm >= RAID_TARGET_WPM) {
-          room.status = 'finished';
-          room.raidVictory = true;
-        }
-      }
-
-      // Check if all players finished
       const allFinished = room.players.every(p => p.isFinished);
       if (allFinished) {
         room.status = 'finished';
@@ -220,18 +203,15 @@ const raceHandler = (io, socket, prisma) => {
 
   // Handle disconnect
   socket.on('disconnect', () => {
-    // Find rooms player was in
     for (const [roomCode, room] of Object.entries(rooms)) {
       const playerIndex = room.players.findIndex(p => p.id === socket.id);
       
       if (playerIndex !== -1) {
         room.players.splice(playerIndex, 1);
         
-        // If room empty, delete it
         if (room.players.length === 0) {
           delete rooms[roomCode];
         } else {
-          // If host left, assign new host
           if (room.players.every(p => !p.isHost)) {
             room.players[0].isHost = true;
           }

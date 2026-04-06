@@ -109,7 +109,7 @@ export const useTyping = (initialPassage) => {
 
   const handleKeyDown = useCallback((e) => {
     if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-    if (status === 'finished') return;
+    if (session.status === 'finished') return;
 
     const { soundEnabled, soundType, volume } = useSettingsStore.getState();
     if (soundEnabled) {
@@ -121,6 +121,8 @@ export const useTyping = (initialPassage) => {
       e.preventDefault();
       
       setSession(prev => {
+        if (prev.status === 'finished') return prev;
+        
         const newSession = { ...prev };
         if (newSession.status === 'idle') {
           newSession.status = 'running';
@@ -128,7 +130,12 @@ export const useTyping = (initialPassage) => {
         }
 
         const newWords = [...newSession.words];
+        // Safety check to ensure we don't access out of bounds index
+        if (newSession.currentWordIndex >= newWords.length) return prev;
+        
         const currentWord = { ...newWords[newSession.currentWordIndex] };
+        if (!currentWord || !currentWord.letters) return prev;
+
         currentWord.letters = [...currentWord.letters];
         
         if (key === 'Backspace') {
@@ -178,9 +185,11 @@ export const useTyping = (initialPassage) => {
         newSession.words = newWords;
 
         // Check if finished
-        if (newSession.currentWordIndex === newSession.words.length) {
-           newSession.status = 'finished';
-        } else if (newSession.words[newSession.currentWordIndex].state === 'typed' && newSession.currentWordIndex === newSession.words.length - 1) {
+        const isLastWord = newSession.currentWordIndex === newSession.words.length - 1;
+        const lastWord = newSession.words[newSession.words.length - 1];
+        const lastWordFinished = lastWord.letters.every(l => l.state !== 'untouched');
+
+        if (newSession.currentWordIndex === newSession.words.length || (isLastWord && lastWordFinished)) {
            newSession.status = 'finished';
         }
         

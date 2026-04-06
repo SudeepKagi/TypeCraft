@@ -42,7 +42,7 @@ const Leaderboard = () => {
              <span className="text-[10px] uppercase font-inter text-neutral-500 tracking-widest font-bold">Your Standing</span>
              
              <div className="flex items-center gap-4">
-                <h1 className="font-syne text-5xl font-black text-primary italic drop-shadow-[0_0_15px_rgba(29,158,117,0.3)]">#{myRank}</h1>
+                <h1 className="font-heading font-black font-black text-primary italic drop-shadow-[0_0_15px_rgba(29,158,117,0.3)]">#{myRank}</h1>
                 <div className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border border-white/5 ${myRankInfo.glow}`} style={{ backgroundColor: myRankInfo.color + '20', color: myRankInfo.color }}>
                    {myRankInfo.name}
                 </div>
@@ -78,7 +78,7 @@ const Leaderboard = () => {
           {/* Header & Tabs */}
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
             <div>
-               <h1 className="text-5xl md:text-7xl font-syne font-black text-neutral-100 tracking-tighter">Leaderboard</h1>
+               <h1 className="text-5xl md:text-7xl font-heading font-black text-neutral-100 tracking-tighter">Leaderboard</h1>
                <p className="text-sm text-neutral-400 font-inter mt-2">Compete with the world's most efficient typists.</p>
             </div>
             
@@ -117,7 +117,7 @@ const Leaderboard = () => {
                     'border-transparent hover:bg-neutral-900/20'
                   }`}
                 >
-                  <div className={`col-span-1 font-syne font-black text-xl italic ${
+                  <div className={`col-span-1 font-heading font-black text-xl italic ${
                     rank === 1 ? 'text-[#FFB800]' : 
                     rank === 2 ? 'text-[#FFD700]' : 
                     rank === 3 ? 'text-[#CD7F32]' : 

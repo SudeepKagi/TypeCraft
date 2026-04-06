@@ -12,8 +12,9 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
-    origin: '*',
-    methods: ['GET', 'POST']
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST'],
+    credentials: true
   }
 });
 
@@ -82,6 +83,35 @@ app.post('/api/user/onboarding', async (req, res) => {
        return res.status(400).json({ error: 'Username already taken' });
     }
     res.status(500).json({ error: 'Failed to complete onboarding' });
+  }
+});
+
+// Update Profile
+app.post('/api/user/update', async (req, res) => {
+  if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
+  
+  const { username, avatarUrl } = req.body;
+  
+  try {
+    const updatedUser = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        username: username || req.user.username,
+        avatarUrl: avatarUrl || req.user.avatarUrl
+      }
+    });
+
+    // Update session user
+    req.login(updatedUser, (err) => {
+      if (err) return res.status(500).json({ error: 'Session update failed' });
+      res.json({ success: true, user: updatedUser });
+    });
+  } catch (error) {
+    console.error('Update Error:', error);
+    if (error.code === 'P2002') {
+       return res.status(400).json({ error: 'Username already taken' });
+    }
+    res.status(500).json({ error: 'Failed to update profile' });
   }
 });
 
@@ -318,9 +348,32 @@ const LOCAL_DICTIONARY = {
   'v': ["video", "vital", "voice", "vivid", "vector", "valve", "vault", "evolve", "vocal", "vortex"],
   'k': ["key", "kind", "keep", "known", "break", "click", "check", "speak", "skate", "krill"],
   'w': ["word", "work", "wait", "west", "swing", "swim", "write", "wave", "wrench", "wrist"],
+  'y': ["cycle", "yield", "crypt", "style", "layer", "hyper", "glyph", "proxy", "entry", "synch"],
+  'p': ["power", "point", "pixel", "phase", "speed", "pulse", "optic", "alpha", "input", "pilot"],
+  't': ["tech", "time", "test", "total", "point", "trace", "state", "track", "trust", "trial"],
+  'a': ["alpha", "array", "await", "area", "base", "data", "frame", "main", "phase", "state"],
+  'e': ["echo", "enter", "every", "edge", "true", "code", "level", "speed", "test", "reset"],
+  'i': ["input", "index", "init", "light", "point", "logic", "link", "pixel", "grid", "fix"],
+  'o': ["open", "node", "core", "point", "mode", "option", "local", "flow", "logic", "word"],
+  'n': ["node", "next", "link", "index", "near", "kind", "open", "even", "main", "count"],
+  'r': ["race", "root", "error", "reset", "core", "trace", "grid", "rank", "true", "break"],
+  's': ["sync", "state", "speed", "system", "save", "test", "list", "base", "site", "past"],
+  'u': ["user", "unit", "unique", "pulse", "input", "build", "true", "fault", "full", "gauge"],
+  'b': ["base", "bits", "byte", "break", "build", "back", "boot", "block", "bin", "beam"],
+  'c': ["code", "core", "cycle", "click", "cloud", "cache", "count", "clear", "case", "sync"],
+  'd': ["data", "done", "dead", "drive", "disk", "dark", "deep", "drop", "dual", "dump"],
+  'f': ["flow", "file", "fast", "fault", "fill", "find", "fixed", "flag", "flash", "form"],
+  'g': ["grid", "gate", "glow", "gauge", "gain", "gear", "grab", "gray", "gap", "get"],
+  'h': ["hash", "high", "head", "hook", "host", "hard", "held", "halt", "haze", "half"],
+  'l': ["link", "loop", "level", "local", "light", "load", "list", "line", "last", "long"],
+  'm': ["mode", "main", "memory", "map", "mask", "mesh", "mono", "made", "menu", "miss"],
   ';': ["code;", "logic;", "syntax;", "yield;", "await;", "return;", "const;", "let;", "if;", "while;"],
   '[': ["arr[i]", "data[0]", "list[n]", "val[x]", "map[k]", "set[v]", "box[y]", "bit[z]", "obj[p]", "key[s]"],
-  ']': ["arr[0]", "map[x]", "list[i]", "data[z]", "set[k]", "val[y]", "bit[p]", "box[s]", "obj[v]", "key[n]"]
+  ']': ["arr[0]", "map[x]", "list[i]", "data[z]", "set[k]", "val[y]", "bit[p]", "box[s]", "obj[v]", "key[n]"],
+  '{': ["{data:", "{node:", "{item:", "{type:", "{kind:", "{link:", "{sync:", "{base:", "{core:", "{user:"],
+  '}': ["data}", "node}", "item}", "type}", "kind}", "link}", "sync}", "base}", "core}", "user}"],
+  '<': ["<div", "<span", "<path", "<svg", "<link", "<user", "<item", "<node", "<sync", "<core"],
+  '>': ["div>", "span>", "path>", "svg>", "link>", "user>", "item>", "node>", "sync>", "core>"]
 };
 
 // Generates a passage locally if AI fails, ensuring 100% saturation
@@ -331,7 +384,7 @@ const generateLocalSaturatedPassage = (weakness) => {
   let passageRaw = [];
   for (let i = 0; i < 20; i++) {
     const targetChar = chars[i % chars.length];
-    const choices = LOCAL_DICTIONARY[targetChar] || ["sync", "link", "node", "core", targetChar + " " + targetChar];
+    const choices = LOCAL_DICTIONARY[targetChar] || [targetChar, targetChar + targetChar, targetChar + " " + targetChar];
     const word = choices[Math.floor(Math.random() * choices.length)];
     passageRaw.push(word);
   }
@@ -340,7 +393,7 @@ const generateLocalSaturatedPassage = (weakness) => {
   const passage = passageRaw.sort(() => Math.random() - 0.5).join(' ');
   return {
     passage,
-    insights: `Local saturation backup engaged for [ ${weakness} ]. Direct hardware override providing 100% targeted protocol.`
+    insights: `Local saturation backup engaged for [ ${weakness} ]. Direct hardware override providing 100% targeted routine.`
   };
 };
 

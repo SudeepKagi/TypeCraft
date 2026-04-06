@@ -2,17 +2,9 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/authStore';
+import { Logo } from '../components/ui/Logo';
 
-const AVATARS = [
-  { id: 'avatar_1', name: 'Pulse', url: '/avatars/avatar_1.png' },
-  { id: 'avatar_2', name: 'Neon', url: '/avatars/avatar_2.png' },
-  { id: 'avatar_3', name: 'Signal', url: '/avatars/avatar_3.png' },
-  { id: 'avatar_4', name: 'Ghost', url: '/avatars/avatar_4.png' },
-  { id: 'avatar_5', name: 'Reaper', url: '/avatars/avatar_5.png' },
-  { id: 'avatar_6', name: 'Watcher', url: '/avatars/avatar_6.png' },
-  { id: 'avatar_7', name: 'Rider', url: '/avatars/avatar_7.png' },
-  { id: 'avatar_8', name: 'Medic', url: '/avatars/avatar_8.png' },
-];
+import { AVATARS } from '../constants/avatars';
 
 const Onboarding = () => {
   const [step, setStep] = useState(1);
@@ -67,11 +59,16 @@ const Onboarding = () => {
         className="w-full max-w-lg glass-card p-10 rounded-2xl border border-white/5 relative z-10"
       >
         <div className="mb-10">
-          <div className="flex items-center gap-2 mb-2">
-             <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
-             <span className="text-[10px] font-mono text-primary uppercase tracking-[0.3em]">TypeCraft_System_v.2.4</span>
+          <div className="flex items-center gap-6 mb-6 px-1">
+            <Logo size={48} />
+            <div className="flex flex-col">
+              <div className="flex items-center gap-2 mb-1">
+                 <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                 <span className="text-[10px] font-mono text-primary uppercase tracking-[0.3em]">TypeCraft_System_v.2.4</span>
+              </div>
+              <h1 className="text-3xl md:text-3xl font-heading font-black text-white tracking-tighter uppercase leading-none">Profile Setup</h1>
+            </div>
           </div>
-          <h1 className="text-3xl md:text-4xl font-syne font-black text-white tracking-tighter uppercase">Profile Setup</h1>
           <p className="text-neutral-500 text-sm mt-2 font-inter font-medium leading-relaxed">
             Welcome to TypeCraft. Before you begin, please set up your professional profile and choose an avatar to identify yourself in the arena.
           </p>
@@ -100,7 +97,7 @@ const Onboarding = () => {
               <button 
                 onClick={() => username.length > 2 && setStep(2)}
                 disabled={username.length <= 2}
-                className="w-full py-4 bg-primary text-neutral-900 font-syne font-black text-lg uppercase tracking-wider rounded-xl shadow-teal-glow transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
+                className="w-full py-4 bg-primary text-neutral-900 font-heading font-black text-lg uppercase tracking-wider rounded-xl shadow-teal-glow transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
               >
                 Continue
               </button>
@@ -137,14 +134,14 @@ const Onboarding = () => {
               <div className="flex gap-4">
                 <button 
                   onClick={() => setStep(1)}
-                  className="flex-1 py-4 bg-neutral-900 border border-white/5 text-neutral-400 font-syne font-bold uppercase tracking-widest rounded-xl hover:text-white transition-all shadow-sm"
+                  className="flex-1 py-4 bg-neutral-900 border border-white/5 text-neutral-400 font-heading font-black uppercase tracking-widest rounded-xl hover:text-white transition-all shadow-sm"
                 >
                   Back
                 </button>
                 <button 
                   onClick={handleComplete}
                   disabled={!selectedAvatar || loading}
-                  className="flex-[2] py-4 bg-primary text-neutral-900 font-syne font-black text-lg uppercase tracking-wider rounded-xl shadow-teal-glow transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30"
+                  className="flex-[2] py-4 bg-primary text-neutral-900 font-heading font-black text-lg uppercase tracking-wider rounded-xl shadow-teal-glow transition-all hover:scale-[1.02] active:scale-95 disabled:opacity-30"
                 >
                   {loading ? 'Saving...' : 'Complete Setup'}
                 </button>
