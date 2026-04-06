@@ -23,6 +23,7 @@ With a sleek "cyber-industrial" aesthetic, the platform provides deep technical 
 
 - **🏁 Real-time Multiplayer Racing**: Compete head-to-head with other typists in live rooms with synchronized progress tracking and WPM broadcasting.
 - **🏆 Pro Series (Tournaments)**: Automated matchmaking system with a 4-player quorum requirement and 2.5x XP multipliers for competitive play.
+- **👤 Personalized Profiles**: Interactive onboarding flow for username customization and avatar selection to establish your identity in the arena.
 - **🎯 AI-Powered Weakness Training**: Uses Gemini 2.0 Flash to generate custom passages targeting specific characters you struggle with.
 - **📊 Advanced Analytics**: 
   - Real-time WPM and Accuracy tracking with high-frequency sampling via `requestAnimationFrame`.
