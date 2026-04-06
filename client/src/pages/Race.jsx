@@ -35,7 +35,7 @@ const Race = () => {
   // Fetch stats once on mount or when user changes
   useEffect(() => {
     if (user?.id) {
-       fetch(`http://localhost:4000/api/users/${user.id}/stats`)
+       fetch(`${API_BASE_URL}/api/users/${user.id}/stats`)
          .then(res => res.json())
          .then(data => {
             const rankInfo = calculateRank(data.avgWpm, data.recentAccuracy);

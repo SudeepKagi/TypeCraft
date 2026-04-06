@@ -1,11 +1,12 @@
 import React from 'react';
 import { PageWrapper } from '../components/layout/PageWrapper';
 import { Logo } from '../components/ui/Logo';
+import { API_BASE_URL } from '../lib/constants';
 
 const Auth = () => {
   const handleLogin = (provider) => {
     // Redirect browser to server auth entry point
-    window.location.href = `http://localhost:4000/auth/${provider}`;
+    window.location.href = `${API_BASE_URL}/auth/${provider}`;
   };
 
   return (

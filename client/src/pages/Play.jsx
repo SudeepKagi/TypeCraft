@@ -126,10 +126,7 @@ const Play = () => {
 
   useEffect(() => {
     if (status === 'finished' && userId) {
-      fetch('http://localhost:4000/api/results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      saveResults({
           userId,
           wpm: currentWPM,
           accuracy,
@@ -138,8 +135,6 @@ const Play = () => {
           mode: selectedMode,
           keystrokes
         })
-      })
-      .then(res => res.json())
       .then(data => {
         if (data.xpGained) {
           addXP(data.xpGained);

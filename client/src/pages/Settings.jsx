@@ -4,6 +4,7 @@ import useSettingsStore from '../store/settingsStore';
 import useAuthStore from '../store/authStore';
 import { AVATARS } from '../constants/avatars';
 import { motion, AnimatePresence } from 'framer-motion';
+import { API_BASE_URL } from '../lib/constants';
 
 const Settings = () => {
   const { themeColor, setThemeColor } = useSettingsStore();
@@ -29,7 +30,7 @@ const Settings = () => {
     setStatus({ type: '', message: '' });
 
     try {
-      const res = await fetch('http://localhost:4000/api/user/update', {
+      const res = await fetch(`${API_BASE_URL}/api/user/update`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: editUsername, avatarUrl: editAvatarUrl }),

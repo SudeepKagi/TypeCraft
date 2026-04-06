@@ -1,10 +1,4 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import useAuthStore from '../store/authStore';
-import { Logo } from '../components/ui/Logo';
-
-import { AVATARS } from '../constants/avatars';
+import { API_BASE_URL } from '../lib/constants';
 
 const Onboarding = () => {
   const [step, setStep] = useState(1);
@@ -23,7 +17,7 @@ const Onboarding = () => {
     setError('');
 
     try {
-      const res = await fetch('http://localhost:4000/api/user/onboarding', {
+      const res = await fetch(`${API_BASE_URL}/api/user/onboarding`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

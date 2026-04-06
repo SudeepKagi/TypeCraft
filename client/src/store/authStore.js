@@ -56,7 +56,7 @@ const useAuthStore = create((set, get) => ({
 
   logout: async () => {
     try {
-      await fetch('http://localhost:4000/auth/logout', { 
+      await fetch(`${API_BASE_URL}/auth/logout`, { 
         method: 'POST',
         credentials: 'include'
       });

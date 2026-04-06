@@ -3,11 +3,12 @@ import { Link } from 'react-router-dom';
 import { PageWrapper } from '../components/layout/PageWrapper';
 import useAuthStore from '../store/authStore';
 import { calculateRank } from '../lib/rankCalc';
+import { API_BASE_URL } from '../lib/constants';
 
 const Dashboard = () => {
-  const userId = useAuthStore(state => state.userId);
-  const user = useAuthStore(state => state.user);
-  const [activeTab, setActiveTab] = useState('global');
+  const { user } = useAuthStore();
+  const userId = user?.id;
+  const [activeTab, setActiveTab] = useState('history');
   const [leaderboard, setLeaderboard] = useState([]);
   const [stats, setStats] = useState({
     bestWpm: 0,
@@ -21,21 +22,23 @@ const Dashboard = () => {
 
   useEffect(() => {
     if (userId) {
-      fetch(`http://localhost:4000/api/users/${userId}/stats`, {
+      fetch(`${API_BASE_URL}/api/users/${userId}/stats`, {
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include'
       })
         .then(res => res.json())
         .then(data => setStats(data))
         .catch(err => console.error('Failed to fetch stats:', err));
 
-      fetch(`http://localhost:4000/api/users/${userId}/heatmap`, {
+      fetch(`${API_BASE_URL}/api/users/${userId}/heatmap`, {
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include'
       })
         .then(res => res.json())
-        .then(data => setHeatmap(data))
+        .then(data => setHeatmap(data || {}))
         .catch(err => console.error('Failed to fetch heatmap:', err));
       
-      fetch('http://localhost:4000/api/leaderboard')
+      fetch(`${API_BASE_URL}/api/leaderboard`)
         .then(res => res.json())
         .then(data => setLeaderboard(data.slice(0, 5)))
         .catch(err => console.error('Failed to fetch leaderboard:', err));

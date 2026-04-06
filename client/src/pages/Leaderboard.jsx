@@ -19,7 +19,7 @@ const Leaderboard = () => {
   const myRankInfo = calculateRank(myWpm, myAccuracy);
 
   useEffect(() => {
-    fetch('http://localhost:4000/api/leaderboard')
+    fetch(`${API_BASE_URL}/api/leaderboard`)
       .then(res => res.json())
       .then(data => {
         setLeaderboard(data);

@@ -31,7 +31,7 @@ const Trainer = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch('http://localhost:4000/api/ai/train', {
+      const response = await fetch(`${API_BASE_URL}/api/ai/train`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ weakness })
