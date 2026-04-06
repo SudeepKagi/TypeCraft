@@ -20,7 +20,6 @@
 **TypeCraft** is a professional-grade typing application designed for developers and power users who want to master their muscle memory. Unlike standard typing tutors, TypeCraft utilizes **Google Gemini 2.0 Flash** to analyze your character-level weaknesses and generate 100% saturated training passages in real-time.
 
 With a sleek "cyber-industrial" aesthetic, the platform provides deep technical insights into your typing performance, including WPM history, accuracy rates, and character heatmaps.
-
 ## ✨ Features
 
 - **🏁 Real-time Multiplayer Racing**: Compete head-to-head with other typists in live rooms with synchronized progress tracking and WPM broadcasting.
@@ -80,30 +79,30 @@ text
 ### Installation
 
 1. **Clone the repository**:
-   ```bash
+   bash
    git clone https://github.com/SudeepKagi/TypeCraft.git
    cd TypeCraft
-   ```
+   
 
 2. **Setup Server**:
-   ```bash
+   bash
    cd server
    npm install
    cp .env.example .env # Add your GEMINI_API_KEY and Auth Credentials
    npx prisma migrate dev --name init
    npm run dev
-   ```
+   
 
 3. **Setup Client**:
-   ```bash
+   bash
    cd ../client
    npm install
    npm run dev
-   ```
+   
 
 ### Configuration (.env)
 **Server:**
-```env
+env
 DATABASE_URL="file:./dev.db"
 SESSION_SECRET="your_secret"
 GEMINI_API_KEY="your_gemini_key"
@@ -112,10 +111,9 @@ GOOGLE_CLIENT_ID="..."
 GOOGLE_CLIENT_SECRET="..."
 GITHUB_CLIENT_ID="..."
 GITHUB_CLIENT_SECRET="..."
-```
+
 
 ---
-
 ## ⌨️ Usage
 
 ### Core Typing Hook
