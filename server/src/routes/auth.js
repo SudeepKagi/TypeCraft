@@ -21,19 +21,21 @@ module.exports = (prisma) => {
     }
   });
 
+  const FRONTEND_URL = process.env.FRONTEND_URL || 'http://localhost:5173';
+  const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:4000';
+
   // ========== GOOGLE STRATEGY ==========
   if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
     passport.use(new GoogleStrategy({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: 'http://localhost:4000/auth/google/callback'
+      callbackURL: `${BACKEND_URL}/auth/google/callback`
     }, async (accessToken, refreshToken, profile, done) => {
       try {
         const email = profile.emails[0].value;
         const username = profile.displayName || email.split('@')[0];
         const avatarUrl = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
 
-        // Find or create user
         let user = await prisma.user.findFirst({
           where: {
             OR: [
@@ -44,7 +46,6 @@ module.exports = (prisma) => {
         });
 
         if (user) {
-          // Link Google ID if matches email but wasn't linked
           if (!user.googleId) {
             user = await prisma.user.update({
               where: { id: user.id },
@@ -52,7 +53,6 @@ module.exports = (prisma) => {
             });
           }
         } else {
-          // Create new user
           user = await prisma.user.create({
             data: {
               email,
@@ -71,10 +71,9 @@ module.exports = (prisma) => {
     router.get('/google', passport.authenticate('google', { scope: ['profile', 'email'] }));
     
     router.get('/google/callback', 
-      passport.authenticate('google', { failureRedirect: 'http://localhost:5173/auth?error=true' }),
+      passport.authenticate('google', { failureRedirect: `${FRONTEND_URL}/auth?error=true` }),
       (req, res) => {
-        // Successful authentication
-        res.redirect('http://localhost:5173/dashboard');
+        res.redirect(`${FRONTEND_URL}/dashboard`);
       }
     );
   }
@@ -84,7 +83,7 @@ module.exports = (prisma) => {
     passport.use(new GitHubStrategy({
       clientID: process.env.GITHUB_CLIENT_ID,
       clientSecret: process.env.GITHUB_CLIENT_SECRET,
-      callbackURL: 'http://localhost:4000/auth/github/callback',
+      callbackURL: `${BACKEND_URL}/auth/github/callback`,
       scope: ['user:email']
     }, async (accessToken, refreshToken, profile, done) => {
       try {
@@ -127,9 +126,9 @@ module.exports = (prisma) => {
     router.get('/github', passport.authenticate('github', { scope: ['user:email'] }));
     
     router.get('/github/callback', 
-      passport.authenticate('github', { failureRedirect: 'http://localhost:5173/auth?error=true' }),
+      passport.authenticate('github', { failureRedirect: `${FRONTEND_URL}/auth?error=true` }),
       (req, res) => {
-        res.redirect('http://localhost:5173/dashboard');
+        res.redirect(`${FRONTEND_URL}/dashboard`);
       }
     );
   }
