@@ -1,3 +1,4 @@
+
 # TypeCraft
 
 <div align="center">
@@ -22,64 +23,53 @@ With a sleek "cyber-industrial" aesthetic, the platform provides deep technical 
 
 ## ✨ Features
 
+- **🏁 Real-time Multiplayer Racing**: Compete head-to-head with other typists in live rooms with synchronized progress tracking and WPM broadcasting.
+- **🏆 Pro Series (Tournaments)**: Automated matchmaking system with a 4-player quorum requirement and 2.5x XP multipliers for competitive play.
 - **🎯 AI-Powered Weakness Training**: Uses Gemini 2.0 Flash to generate custom passages targeting specific characters you struggle with.
-- **⚡ Multiple Practice Modes**:
-  - **Words**: Standard vocabulary training.
-  - **Quotes**: Real-world sentence structure.
-  - **Code**: Syntax-heavy training for developers (includes brackets, semicolons, and keywords).
-- **📊 Advanced Analytics**:
-  - Real-time WPM and Accuracy tracking.
-  - Character-level Heatmaps showing precision across the keyboard.
-  - Consistency scoring and WPM history graphs.
-- **🎮 Gamified Progression**:
-  - Earn XP based on WPM, Accuracy, and Challenge Duration.
-  - Global Leaderboards to compete with other operators.
-  - Custom Avatars and Onboarding flow.
-- **🌐 Real-time Connectivity**: Powered by Socket.io for low-latency interactions and race synchronization.
+- **📊 Advanced Analytics**: 
+  - Real-time WPM and Accuracy tracking with high-frequency sampling via `requestAnimationFrame`.
+  - Global Leaderboards featuring rank tiers (Master, Diamond, etc.) and user standings.
+  - WPM history graphing and consistency scoring.
+- **🎮 Gamified Progression**: 
+  - Leveling system based on a square-root XP curve (`level = sqrt(XP/50) + 1`).
+  - Dynamic XP rewards based on performance and race type.
+- **🌐 Low-Latency Connectivity**: Powered by Socket.io for seamless race state management, countdown synchronization, and live updates.
 - **🔐 Secure Authentication**: Integrated Social Auth via Google and GitHub using Passport.js.
-
 ## 🛠 Tech Stack
 
 ### Frontend
 - **Framework**: React 19 (Vite)
-- **State Management**: Zustand
-- **Animations**: Framer Motion & TSParticles
+- **State Management**: Zustand (Auth, Race, and Settings stores)
+- **Animations**: Framer Motion
 - **Styling**: Tailwind CSS
-- **Charts**: Recharts
+- **Real-time**: Socket.io-client
 - **Icons**: Lucide React
 
 ### Backend
 - **Runtime**: Node.js / Express
 - **Database**: Prisma ORM (SQLite/PostgreSQL)
-- **Real-time**: Socket.io
+- **Real-time**: Socket.io (Room-based event handlers)
 - **AI Integration**: Google Generative AI (Gemini 2.0 Flash)
 - **Authentication**: Passport.js (Google & GitHub Strategies)
-
----
-
 ## 🏗 Architecture
 
 TypeCraft follows a decoupled Client-Server architecture:
 
-```text
+text
 ├── client/                # React Vite Application
 │   ├── src/hooks/         # Core typing logic (useTyping.js)
-│   ├── src/store/         # Zustand stores for Auth & Settings
-│   └── src/lib/           # WPM calculation and utility functions
+│   ├── src/store/         # Zustand stores (Auth, Race, Settings)
+│   └── src/pages/         # Race, Leaderboard, and Dashboard views
 └── server/                # Express Node.js Server
-    ├── src/handlers/      # Socket.io event handlers
+    ├── src/handlers/      # Socket.io race & tournament logic
     ├── src/routes/        # REST API Endpoints
     └── prisma/            # Database Schema & Migrations
-```
+
 
 ### Data Flow
-1. **Typing Session**: The `useTyping` hook captures keystrokes and calculates metrics locally.
-2. **Result Sync**: On completion, results are POSTed to `/api/results`.
-3. **XP Calculation**: The server calculates XP using: `(WPM * Accuracy/100) * (Duration/60)`.
-4. **AI Generation**: If a user requests training, the server prompts Gemini to create a "saturated" passage where every word contains the target weak characters.
-
----
-
+1. **Multiplayer Sync**: The `raceHandler` manages room states (`waiting`, `countdown`, `racing`). Players emit `race:progress` which is broadcasted to all participants in the room via Socket.io.
+2. **XP & Leveling**: Upon race completion, the server calculates XP based on `WPM * Accuracy`. Tournaments apply a 2.5x multiplier. Levels are derived using the formula: `Math.floor(Math.sqrt(totalXP / 50)) + 1`.
+3. **Result Persistence**: Race metrics and user progression are persisted via Prisma, updating global standings and user stats in real-time.
 ## 🚀 Getting Started
 
 ### Prerequisites
@@ -131,23 +121,27 @@ GITHUB_CLIENT_SECRET="..."
 ### Core Typing Hook
 Developers can leverage the `useTyping` hook for custom typing interfaces:
 
-```javascript
+javascript
 import { useTyping } from './hooks/useTyping';
 
 const { words, currentWPM, accuracy, status } = useTyping("Initial passage text");
 
-// status can be 'idle', 'running', or 'finished'
-```
+// status can be 'idle', 'running', 'counting', or 'finished'
 
-### AI Training Endpoint
-To generate a targeted practice session:
-```bash
-curl -X POST http://localhost:4000/api/ai/train \
-     -H "Content-Type: application/json" \
-     -d '{"weakness": "qz"}'
-```
 
----
+### Multiplayer Socket Events
+Interact with the racing system using the following socket events:
+
+javascript
+// Create or join a race
+socket.emit('race:create', { user, type: 'race' });
+socket.emit('race:join', { roomCode, user });
+
+// Enter tournament matchmaking
+socket.emit('race:join:tournament', { user });
+
+// Broadcast live progress
+socket.emit('race:progress', { roomCode, progress, wpm, accuracy });
 
 ## 📈 API Documentation
 
