@@ -4,6 +4,7 @@ import { WordDisplay } from '../components/typing/WordDisplay';
 import { useTyping } from '../hooks/useTyping';
 import useAuthStore from '../store/authStore';
 import { Logo } from '../components/ui/Logo';
+import { API_BASE_URL } from '../lib/constants';
 
 const Trainer = () => {
   const [weakness, setWeakness] = useState('');

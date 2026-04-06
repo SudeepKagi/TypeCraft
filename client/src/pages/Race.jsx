@@ -10,6 +10,7 @@ import socket from '../lib/socket';
 import { calculateRank } from '../lib/rankCalc';
 import RaceResultsOverlay from '../components/typing/RaceResultsOverlay';
 import { RoomManual } from '../components/typing/RoomManual';
+import { API_BASE_URL } from '../lib/constants';
 
 const Race = () => {
   const navigate = useNavigate();

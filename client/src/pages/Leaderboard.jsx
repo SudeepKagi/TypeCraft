@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { PageWrapper } from '../components/layout/PageWrapper';
 import useAuthStore from '../store/authStore';
 import { calculateRank } from '../lib/rankCalc';
+import { API_BASE_URL } from '../lib/constants';
 
 const Leaderboard = () => {
   const user = useAuthStore(state => state.user);
