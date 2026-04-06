@@ -1,7 +1,18 @@
 import { create } from 'zustand';
 import { API_BASE_URL } from '../lib/constants';
+import socket from '../lib/socket';
 
-const useAuthStore = create((set, get) => ({
+const useAuthStore = create((set, get) => {
+  // Global socket listener for real-time profile sync
+  if (typeof window !== 'undefined') {
+    socket.on('user:update', (data) => {
+      set((state) => ({
+        user: state.user ? { ...state.user, xp: data.xp, level: data.level } : null
+      }));
+    });
+  }
+
+  return {
   user: null,
   userId: null,
   isAuthenticated: false,
@@ -75,6 +86,7 @@ const useAuthStore = create((set, get) => ({
     const { initializeAuth } = get();
     await initializeAuth();
   }
-}));
+  };
+});
 
 export default useAuthStore;

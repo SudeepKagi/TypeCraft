@@ -31,6 +31,7 @@ model RaceResult {
   id        String   @id @default(cuid())
   wpm       Float
   accuracy  Float
+  xpGained  Int      @default(0)
   date      DateTime @default(now())
   
   userId    String
@@ -41,6 +42,7 @@ model TypingSession {
   id        String   @id @default(cuid())
   wpm       Float
   accuracy  Float
+  xpGained  Int      @default(0)
   duration  Int      // in seconds
   mode      String   // e.g. "time", "words"
   date      DateTime @default(now())

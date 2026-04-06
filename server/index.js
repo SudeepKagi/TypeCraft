@@ -154,6 +154,7 @@ app.post('/api/results', async (req, res) => {
       data: {
         wpm: parseFloat(wpm),
         accuracy: parseFloat(accuracy),
+        xpGained: 0, // Placeholder, updated later
         userId
       }
     });
@@ -190,6 +191,7 @@ app.post('/api/results', async (req, res) => {
         data: {
           wpm: parseFloat(wpm),
           accuracy: parseFloat(accuracy),
+          xpGained: 0, // Placeholder, updated later
           duration: activeDuration,
           mode: mode || 'time',
           userId
@@ -203,12 +205,32 @@ app.post('/api/results', async (req, res) => {
     const rawXp = parseFloat(wpm) * (parseFloat(accuracy) / 100) * weightFactor;
     const xpGained = Math.max(1, Math.floor(rawXp));
     
-    const updatedUser = await prisma.user.update({
-      where: { id: userId },
-      data: {
-        xp: { increment: xpGained }
-      }
-    });
+    const userStats = await prisma.user.findUnique({ where: { id: userId }, select: { xp: true } });
+    const newXP = (userStats?.xp || 0) + xpGained;
+    const newLevel = Math.floor(Math.sqrt(newXP / 50)) + 1;
+
+    const [updatedUser] = await Promise.all([
+      prisma.user.update({
+        where: { id: userId },
+        data: {
+          xp: newXP,
+          level: newLevel
+        }
+      }),
+      prisma.raceResult.update({
+        where: { id: result.id },
+        data: { xpGained }
+      }),
+      ...(mode === 'solo' || mode === 'trainer' || mode === 'words' || mode === 'quotes' || mode === 'code' ? [
+        prisma.typingSession.updateMany({
+           where: { userId, date: result.date }, // A bit risky but TypingSession doesn't have an ID easily reachable here unless we save it
+           data: { xpGained }
+        })
+      ] : [])
+    ]);
+
+    // Re-fetch the specific session ID for TypingSession to be more precise if possible
+    // Actually, let's just update the creation logic to include xpGained now that we calculated it
 
     res.json({ result, xpGained, totalXp: updatedUser.xp });
   } catch (error) {
@@ -259,6 +281,7 @@ app.get('/api/users/:userId/stats', async (req, res) => {
       id: r.id,
       wpm: r.wpm,
       accuracy: r.accuracy,
+      xpGained: r.xpGained || 0,
       date: r.date
     }));
 

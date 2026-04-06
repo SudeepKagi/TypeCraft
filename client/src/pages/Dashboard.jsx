@@ -247,7 +247,7 @@ const Dashboard = () => {
                         </div>
                         <div className="flex flex-col items-end">
                           <span className="text-xs font-mono text-primary font-bold">{Math.floor(race.accuracy)}%</span>
-                          <span className="text-[8px] font-mono text-neutral-600 uppercase tracking-widest">Success</span>
+                          <span className="text-[10px] font-mono text-amber-400 uppercase tracking-widest font-black">+{race.xpGained || 0} XP</span>
                         </div>
                       </div>
                     ))

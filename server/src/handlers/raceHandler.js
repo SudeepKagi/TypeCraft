@@ -186,6 +186,7 @@ const raceHandler = (io, socket, prisma) => {
                     data: {
                       wpm: parseFloat(wpm),
                       accuracy: parseFloat(accuracy || 100),
+                      xpGained: xpGained,
                       userId: player.dbId
                     }
                   }),
@@ -197,6 +198,12 @@ const raceHandler = (io, socket, prisma) => {
                       }
                   })
               ]);
+
+              // Notify the client specifically to update their authStore
+              socket.emit('user:update', { 
+                xp: newXP,
+                level: newLevel
+              });
             } catch (err) {
               console.error('[Race] Stat sync error:', err);
             }
