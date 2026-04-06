@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { API_BASE_URL } from '../lib/constants';
 
 const useAuthStore = create((set, get) => ({
   user: null,
